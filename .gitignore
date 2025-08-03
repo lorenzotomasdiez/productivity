@@ -221,6 +221,23 @@ iOSInjectionProject/
 !*.xcodeproj/project.xcworkspace/
 !*.xcodeproj/project.xcworkspace/xcshareddata/
 
+# Additional Xcode files
+*.xcuserdata/
+*.xcscmblueprint
+*.xcscheme
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/
+
+# Xcode build products
+*.app
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Xcode testing
+*.xctest/
+*.xctestrun
+
 # macOS
 .AppleDouble
 .LSOverride
