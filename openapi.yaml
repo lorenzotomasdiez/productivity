@@ -1,0 +1,3357 @@
+openapi: 3.0.3
+info:
+  title: Jarvis Personal Life Management System API
+  description: |
+    Comprehensive API for the Jarvis AI-powered personal productivity platform.
+    
+    ## Features
+    - Complete life area management with customizable tracking
+    - AI-powered chat interface (Jarvis) with full context awareness
+    - Automated research engine with scheduled content generation
+    - Multi-type goal tracking (numeric, habit, milestone, binary)
+    - Apple ecosystem integration (HealthKit, Calendar, Reminders)
+    - Intelligent automation rules and notifications
+    - Real-time progress analytics and insights
+    
+    ## Authentication
+    Uses Apple Sign In with JWT Bearer tokens for secure API access.
+    
+    ## Testing
+    All endpoints include comprehensive examples for TDD implementation.
+  version: 1.0.0
+  contact:
+    name: Jarvis Development Team
+    email: dev@jarvis-app.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.jarvis-app.com/v1
+    description: Production server
+  - url: https://staging-api.jarvis-app.com/v1
+    description: Staging server
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # =============================================
+  # AUTHENTICATION ENDPOINTS
+  # =============================================
+  
+  /auth/apple-signin:
+    post:
+      tags: [Authentication]
+      summary: Apple Sign In authentication
+      description: Authenticate user with Apple ID and create/update user session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identity_token, authorization_code]
+              properties:
+                identity_token:
+                  type: string
+                  description: Apple identity token
+                  example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                authorization_code:
+                  type: string
+                  description: Apple authorization code
+                  example: "c1234567890abcdef..."
+                user_info:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: "Lorenzo Tomas"
+                    email:
+                      type: string
+                      format: email
+                      example: "lorenzo@example.com"
+                device_info:
+                  type: object
+                  properties:
+                    device_id:
+                      type: string
+                      example: "iPhone14,2"
+                    device_name:
+                      type: string
+                      example: "Lorenzo's iPhone"
+      responses:
+        '201':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          access_token:
+                            type: string
+                            description: JWT access token (15 min expiry)
+                            example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                          refresh_token:
+                            type: string
+                            description: Refresh token (30 day expiry)
+                            example: "rt_1234567890abcdef..."
+                          user:
+                            $ref: '#/components/schemas/User'
+                          expires_in:
+                            type: integer
+                            description: Access token expiry in seconds
+                            example: 900
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      description: Get new access token using refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+                  minLength: 1
+                  example: "rt_1234567890abcdef..."
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          access_token:
+                            type: string
+                            example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                          expires_in:
+                            type: integer
+                            example: 900
+        '400':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            example: "INVALID_REFRESH_TOKEN"
+                          message:
+                            example: "Refresh token is invalid or malformed"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout user
+      description: Invalidate current session and refresh token
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: "Successfully logged out"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user profile
+      description: Retrieve authenticated user's profile information
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # =============================================
+  # LIFE AREAS ENDPOINTS
+  # =============================================
+  
+  /life-areas:
+    get:
+      tags: [Life Areas]
+      summary: List user's life areas
+      description: Get all life areas for the authenticated user
+      parameters:
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active status
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/LifeAreaType'
+          description: Filter by life area type
+      responses:
+        '200':
+          description: Life areas retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LifeArea'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Life Areas]
+      summary: Create new life area
+      description: Create a new life area for goal tracking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLifeAreaRequest'
+      responses:
+        '201':
+          description: Life area created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LifeArea'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /life-areas/{id}:
+    get:
+      tags: [Life Areas]
+      summary: Get specific life area
+      description: Retrieve details of a specific life area
+      parameters:
+        - $ref: '#/components/parameters/LifeAreaId'
+      responses:
+        '200':
+          description: Life area retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LifeArea'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Life Areas]
+      summary: Update life area
+      description: Update an existing life area
+      parameters:
+        - $ref: '#/components/parameters/LifeAreaId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLifeAreaRequest'
+      responses:
+        '200':
+          description: Life area updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LifeArea'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Life Areas]
+      summary: Delete life area
+      description: Delete a life area and all associated goals
+      parameters:
+        - $ref: '#/components/parameters/LifeAreaId'
+      responses:
+        '200':
+          description: Life area deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /life-areas/reorder:
+    put:
+      tags: [Life Areas]
+      summary: Reorder life areas
+      description: Update the sort order of life areas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [life_area_orders]
+              properties:
+                life_area_orders:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, sort_order]
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      sort_order:
+                        type: integer
+                        minimum: 0
+      responses:
+        '200':
+          description: Life areas reordered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # =============================================
+  # GOALS ENDPOINTS
+  # =============================================
+
+  /goals:
+    get:
+      tags: [Goals]
+      summary: List user's goals
+      description: Get goals with filtering and pagination
+      parameters:
+        - $ref: '#/components/parameters/Pagination_Limit'
+        - $ref: '#/components/parameters/Pagination_Page'
+        - name: life_area_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by life area
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/GoalStatus'
+          description: Filter by goal status
+        - name: goal_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/GoalType'
+          description: Filter by goal type
+        - name: deadline_before
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter goals with deadline before date
+      responses:
+        '200':
+          description: Goals retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Goal'
+                      meta:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Goals]
+      summary: Create new goal
+      description: Create a new goal for tracking progress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGoalRequest'
+      responses:
+        '201':
+          description: Goal created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Goal'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /goals/{id}:
+    get:
+      tags: [Goals]
+      summary: Get specific goal
+      description: Retrieve details of a specific goal with progress
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+      responses:
+        '200':
+          description: Goal retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GoalWithProgress'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Goals]
+      summary: Update goal
+      description: Update an existing goal
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGoalRequest'
+      responses:
+        '200':
+          description: Goal updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Goal'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Goals]
+      summary: Delete goal
+      description: Delete a goal and all associated progress entries
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+      responses:
+        '200':
+          description: Goal deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /goals/{id}/progress:
+    get:
+      tags: [Goals]
+      summary: Get goal progress data
+      description: Retrieve progress entries for a specific goal
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date for progress data
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: End date for progress data
+        - $ref: '#/components/parameters/Pagination_Limit'
+        - $ref: '#/components/parameters/Pagination_Page'
+      responses:
+        '200':
+          description: Progress data retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          goal:
+                            $ref: '#/components/schemas/Goal'
+                          progress_entries:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ProgressEntry'
+                          statistics:
+                            type: object
+                            properties:
+                              total_entries:
+                                type: integer
+                              average_value:
+                                type: number
+                              streak:
+                                type: integer
+                              completion_percentage:
+                                type: number
+                                minimum: 0
+                                maximum: 100
+                      meta:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Goals]
+      summary: Add progress entry
+      description: Add a new progress entry to a goal
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProgressEntryRequest'
+      responses:
+        '201':
+          description: Progress entry added successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProgressEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /progress-entries/{id}:
+    put:
+      tags: [Goals]
+      summary: Update progress entry
+      description: Update an existing progress entry
+      parameters:
+        - $ref: '#/components/parameters/ProgressEntryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProgressEntryRequest'
+      responses:
+        '200':
+          description: Progress entry updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProgressEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Goals]
+      summary: Delete progress entry
+      description: Delete a progress entry
+      parameters:
+        - $ref: '#/components/parameters/ProgressEntryId'
+      responses:
+        '200':
+          description: Progress entry deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # =============================================
+  # AI CHAT ENDPOINTS (JARVIS)
+  # =============================================
+
+  /chat/conversations:
+    get:
+      tags: [AI Chat]
+      summary: List chat conversations
+      description: Get user's chat conversations with Jarvis
+      parameters:
+        - $ref: '#/components/parameters/Pagination_Limit'
+        - $ref: '#/components/parameters/Pagination_Page'
+        - name: is_archived
+          in: query
+          schema:
+            type: boolean
+          description: Filter by archived status
+      responses:
+        '200':
+          description: Conversations retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ChatConversation'
+                      meta:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [AI Chat]
+      summary: Create new conversation
+      description: Start a new chat conversation with Jarvis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                  example: "Weekly Progress Review"
+                initial_message:
+                  type: string
+                  example: "Hey Jarvis, how am I doing with my goals this week?"
+                context_preference:
+                  type: object
+                  properties:
+                    include_goals:
+                      type: boolean
+                      default: true
+                    include_recent_progress:
+                      type: boolean
+                      default: true
+                    include_life_areas:
+                      type: boolean
+                      default: true
+                    time_range_days:
+                      type: integer
+                      default: 7
+                      minimum: 1
+                      maximum: 365
+      responses:
+        '201':
+          description: Conversation created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ChatConversationWithMessages'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /chat/conversations/{id}:
+    get:
+      tags: [AI Chat]
+      summary: Get conversation with messages
+      description: Retrieve a conversation with all messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Conversation ID
+        - $ref: '#/components/parameters/Pagination_Limit'
+        - $ref: '#/components/parameters/Pagination_Page'
+      responses:
+        '200':
+          description: Conversation retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ChatConversationWithMessages'
+                      meta:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [AI Chat]
+      summary: Delete conversation
+      description: Delete a chat conversation and all messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Conversation ID
+      responses:
+        '200':
+          description: Conversation deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /chat/conversations/{id}/messages:
+    post:
+      tags: [AI Chat]
+      summary: Send message to Jarvis
+      description: |
+        Send a message to Jarvis and get AI response.
+        
+        **Rate Limits:**
+        - 50 messages per hour per user
+        - 10 messages per minute per user
+        - Rate limit headers included in response
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Conversation ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+                  example: "How can I improve my workout consistency?"
+                include_context:
+                  type: boolean
+                  default: true
+                  description: Whether to include user data context in AI response
+      responses:
+        '201':
+          description: Message sent and AI response generated
+          headers:
+            X-RateLimit-Limit:
+              description: Total requests allowed per hour
+              schema:
+                type: integer
+                example: 50
+            X-RateLimit-Remaining:
+              description: Requests remaining in current hour
+              schema:
+                type: integer
+                example: 42
+            X-RateLimit-Reset:
+              description: Time when rate limit resets (Unix timestamp)
+              schema:
+                type: integer
+                example: 1691234567
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user_message:
+                            $ref: '#/components/schemas/ChatMessage'
+                          ai_response:
+                            $ref: '#/components/schemas/ChatMessage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          description: AI service temporarily unavailable
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            example: "AI_SERVICE_UNAVAILABLE"
+                          message:
+                            example: "AI service is temporarily unavailable. Please try again later."
+
+  # =============================================
+  # RESEARCH ENGINE ENDPOINTS
+  # =============================================
+
+  /research/categories:
+    get:
+      tags: [Research Engine]
+      summary: List research categories
+      description: Get user's automated research categories
+      parameters:
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active status
+      responses:
+        '200':
+          description: Research categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ResearchCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Research Engine]
+      summary: Create research category
+      description: Create a new automated research category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateResearchCategoryRequest'
+      responses:
+        '201':
+          description: Research category created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ResearchCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /research/categories/{id}:
+    put:
+      tags: [Research Engine]
+      summary: Update research category
+      description: Update an existing research category
+      parameters:
+        - $ref: '#/components/parameters/ResearchCategoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateResearchCategoryRequest'
+      responses:
+        '200':
+          description: Research category updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ResearchCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Research Engine]
+      summary: Delete research category
+      description: Delete a research category and all results
+      parameters:
+        - $ref: '#/components/parameters/ResearchCategoryId'
+      responses:
+        '200':
+          description: Research category deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /research/results:
+    get:
+      tags: [Research Engine]
+      summary: List research results
+      description: Get research results with filtering
+      parameters:
+        - $ref: '#/components/parameters/Pagination_Limit'
+        - $ref: '#/components/parameters/Pagination_Page'
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by research category
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ResearchStatus'
+          description: Filter by research status
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter results from date
+      responses:
+        '200':
+          description: Research results retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ResearchResult'
+                      meta:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /research/results/{id}:
+    get:
+      tags: [Research Engine]
+      summary: Get specific research result
+      description: Retrieve details of a specific research result
+      parameters:
+        - $ref: '#/components/parameters/ResearchResultId'
+      responses:
+        '200':
+          description: Research result retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ResearchResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Research Engine]
+      summary: Update research result status
+      description: Approve, reject, or modify research result
+      parameters:
+        - $ref: '#/components/parameters/ResearchResultId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/ResearchStatus'
+                notes:
+                  type: string
+                  maxLength: 500
+                  description: User notes about the research result
+                  example: "Interesting insights, will implement the suggested techniques"
+      responses:
+        '200':
+          description: Research result updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ResearchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /research/categories/{id}/trigger:
+    post:
+      tags: [Research Engine]
+      summary: Manually trigger research
+      description: Trigger research execution for a specific category
+      parameters:
+        - $ref: '#/components/parameters/ResearchCategoryId'
+      responses:
+        '202':
+          description: Research triggered successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: "Research has been queued for execution"
+                          estimated_completion:
+                            type: string
+                            format: date-time
+                            description: Estimated completion time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # =============================================
+  # DASHBOARD & ANALYTICS ENDPOINTS
+  # =============================================
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard overview
+      description: Get comprehensive dashboard data for the user
+      parameters:
+        - name: time_range
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+            default: week
+          description: Time range for analytics data
+      responses:
+        '200':
+          description: Dashboard data retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DashboardData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/progress:
+    get:
+      tags: [Analytics]
+      summary: Get progress analytics
+      description: Get detailed progress analytics and trends
+      parameters:
+        - name: life_area_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by specific life area
+        - name: goal_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/GoalType'
+          description: Filter by goal type
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date for analytics
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: End date for analytics
+      responses:
+        '200':
+          description: Progress analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProgressAnalytics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/trends:
+    get:
+      tags: [Analytics]
+      summary: Get trend analysis
+      description: Get trend analysis and pattern recognition
+      responses:
+        '200':
+          description: Trend analysis retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TrendAnalysis'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/insights:
+    get:
+      tags: [Analytics]
+      summary: Get AI-generated insights
+      description: Get personalized AI insights about user progress
+      responses:
+        '200':
+          description: AI insights retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AIInsight'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # =============================================
+  # INTEGRATIONS ENDPOINTS
+  # =============================================
+
+  /integrations:
+    get:
+      tags: [Integrations]
+      summary: List available integrations
+      description: Get list of available and connected integrations
+      responses:
+        '200':
+          description: Integrations retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Integration'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /integrations/{provider}:
+    post:
+      tags: [Integrations]
+      summary: Connect integration
+      description: Connect a third-party integration
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/IntegrationProvider'
+          description: Integration provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                connection_data:
+                  type: object
+                  description: Provider-specific connection data
+                sync_config:
+                  type: object
+                  description: Synchronization configuration
+      responses:
+        '201':
+          description: Integration connected successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/IntegrationConnection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Integrations]
+      summary: Disconnect integration
+      description: Disconnect a third-party integration
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/IntegrationProvider'
+          description: Integration provider
+      responses:
+        '200':
+          description: Integration disconnected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /integrations/{provider}/sync:
+    post:
+      tags: [Integrations]
+      summary: Trigger manual sync
+      description: Manually trigger synchronization for an integration
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/IntegrationProvider'
+          description: Integration provider
+      responses:
+        '202':
+          description: Sync triggered successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: "Sync has been queued"
+                          sync_id:
+                            type: string
+                            format: uuid
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # =============================================
+  # NOTIFICATIONS ENDPOINTS
+  # =============================================
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List user notifications
+      description: Get user's notifications with filtering
+      parameters:
+        - $ref: '#/components/parameters/Pagination_Limit'
+        - $ref: '#/components/parameters/Pagination_Page'
+        - name: is_read
+          in: query
+          schema:
+            type: boolean
+          description: Filter by read status
+        - name: notification_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/NotificationType'
+          description: Filter by notification type
+      responses:
+        '200':
+          description: Notifications retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Notification'
+                      meta:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      summary: Mark notification as read
+      description: Mark a specific notification as read
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      responses:
+        '200':
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/read-all:
+    put:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      description: Mark all user notifications as read
+      responses:
+        '200':
+          description: All notifications marked as read
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          updated_count:
+                            type: integer
+                            description: Number of notifications updated
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+# =============================================
+# COMPONENTS SECTION
+# =============================================
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token obtained from Apple Sign In
+
+  parameters:
+    LifeAreaId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Life area ID
+
+    GoalId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Goal ID
+
+    Pagination_Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Maximum number of items to return
+
+    Pagination_Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number for pagination
+
+    ProgressEntryId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Progress entry ID
+
+    ResearchCategoryId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Research category ID
+
+    ResearchResultId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Research result ID
+
+    NotificationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Notification ID
+
+  schemas:
+    # =============================================
+    # ENUM TYPES
+    # =============================================
+
+    LifeAreaType:
+      type: string
+      enum:
+        - health
+        - finance
+        - learning
+        - work
+        - goals
+        - productivity
+        - relationships
+        - hobbies
+        - personal_growth
+        - custom
+      example: health
+
+    GoalType:
+      type: string
+      enum:
+        - numeric
+        - habit
+        - milestone
+        - binary
+        - custom
+      example: numeric
+
+    GoalStatus:
+      type: string
+      enum:
+        - active
+        - completed
+        - paused
+        - cancelled
+        - archived
+      example: active
+
+    DataSource:
+      type: string
+      enum:
+        - manual
+        - apple_health
+        - apple_calendar
+        - apple_reminders
+        - api_integration
+        - ai_automation
+        - file_import
+      example: manual
+
+    MessageRole:
+      type: string
+      enum:
+        - user
+        - assistant
+        - system
+      example: user
+
+    ResearchStatus:
+      type: string
+      enum:
+        - pending
+        - in_progress
+        - completed
+        - approved
+        - rejected
+        - integrated
+        - archived
+      example: pending
+
+    NotificationType:
+      type: string
+      enum:
+        - reminder
+        - achievement
+        - insight
+        - alert
+        - research_ready
+        - goal_milestone
+        - system
+      example: reminder
+
+    IntegrationProvider:
+      type: string
+      enum:
+        - apple_health
+        - apple_calendar
+        - apple_reminders
+        - gmail
+        - outlook
+        - google_calendar
+        - notion
+        - todoist
+        - github
+        - twitter
+        - linkedin
+        - custom_api
+      example: apple_health
+
+    AIInsightType:
+      type: string
+      enum:
+        - habit_insight
+        - goal_recommendation
+        - trend_analysis
+        - performance_pattern
+        - motivation_boost
+        - productivity_tip
+        - health_insight
+        - financial_advice
+        - learning_suggestion
+        - time_optimization
+      example: habit_insight
+
+    IntegrationCapability:
+      type: string
+      enum:
+        - health_data_import
+        - workout_tracking
+        - heart_rate_monitoring
+        - sleep_tracking
+        - calendar_sync
+        - event_creation
+        - reminder_sync
+        - email_processing
+        - task_management
+        - file_storage
+        - social_posting
+        - data_export
+        - real_time_sync
+        - batch_import
+      example: health_data_import
+
+    # =============================================
+    # CORE ENTITIES
+    # =============================================
+
+    User:
+      type: object
+      required: [id, email, name, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        email:
+          type: string
+          format: email
+          example: "lorenzo@example.com"
+        apple_id:
+          type: string
+          example: "001234.56789abcd.1234"
+        name:
+          type: string
+          maxLength: 255
+          example: "Lorenzo Tomas"
+        profile_data:
+          type: object
+          example:
+            timezone: "UTC"
+            language: "en"
+            avatar_url: null
+        preferences:
+          type: object
+          example:
+            notifications_enabled: true
+            ai_suggestions: true
+            research_frequency: "daily"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-08-03T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-08-03T15:30:00Z"
+
+    LifeArea:
+      type: object
+      required: [id, user_id, name, type, is_active, sort_order, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+          example: "Health & Fitness"
+        type:
+          $ref: '#/components/schemas/LifeAreaType'
+        description:
+          type: string
+          nullable: true
+          example: "Physical and mental wellbeing, workouts, nutrition"
+        icon:
+          type: string
+          maxLength: 100
+          example: "heart.fill"
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          example: "#FF6B6B"
+          description: "Hex color code - must be exactly 6 hexadecimal characters prefixed with #"
+        configuration:
+          type: object
+          example:
+            tracking_methods: ["workouts", "weight", "sleep"]
+            apple_health_sync: true
+        is_active:
+          type: boolean
+          example: true
+        sort_order:
+          type: integer
+          minimum: 0
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Goal:
+      type: object
+      required: [id, user_id, life_area_id, title, goal_type, status, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        life_area_id:
+          type: string
+          format: uuid
+          description: "Must reference an existing life area belonging to the user"
+        parent_goal_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: "Must reference an existing goal belonging to the user. Used for creating sub-goals."
+        title:
+          type: string
+          maxLength: 255
+          example: "Read 24 books this year"
+        description:
+          type: string
+          nullable: true
+          example: "Expand knowledge through reading diverse genres"
+        goal_type:
+          $ref: '#/components/schemas/GoalType'
+        target_value:
+          type: number
+          nullable: true
+          example: 24
+        current_value:
+          type: number
+          default: 0
+          example: 6
+        target_unit:
+          type: string
+          maxLength: 50
+          nullable: true
+          example: "books"
+        deadline:
+          type: string
+          format: date
+          nullable: true
+          example: "2025-12-31"
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 5
+          default: 3
+          example: 4
+          description: "Goal priority (1=lowest, 5=highest)"
+        status:
+          $ref: '#/components/schemas/GoalStatus'
+        metadata:
+          type: object
+          example:
+            categories: ["business", "personal_development"]
+            tracking_config: {"manual_entry": true}
+        reminder_config:
+          type: object
+          example:
+            enabled: true
+            frequency: "daily"
+            time: "09:00"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    GoalWithProgress:
+      allOf:
+        - $ref: '#/components/schemas/Goal'
+        - type: object
+          properties:
+            progress_percentage:
+              type: number
+              minimum: 0
+              maximum: 100
+              example: 25
+            recent_progress:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProgressEntry'
+            streak:
+              type: integer
+              minimum: 0
+              example: 5
+            life_area:
+              $ref: '#/components/schemas/LifeArea'
+
+    ProgressEntry:
+      type: object
+      required: [id, goal_id, user_id, entry_date, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        goal_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        entry_date:
+          type: string
+          format: date
+          example: "2025-08-03"
+        value:
+          type: number
+          nullable: true
+          example: 1
+        notes:
+          type: string
+          nullable: true
+          example: "Finished 'Atomic Habits' - excellent insights on habit formation"
+        data_source:
+          $ref: '#/components/schemas/DataSource'
+        metadata:
+          type: object
+          example:
+            book_title: "Atomic Habits"
+            author: "James Clear"
+            rating: 5
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [image, document, link]
+              url:
+                type: string
+              name:
+                type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ChatConversation:
+      type: object
+      required: [id, user_id, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 255
+          nullable: true
+          example: "Weekly Progress Review"
+        context_data:
+          type: object
+          example:
+            relevant_goals: ["goal_id_1", "goal_id_2"]
+            time_period: "last_7_days"
+        is_archived:
+          type: boolean
+          default: false
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ChatConversationWithMessages:
+      allOf:
+        - $ref: '#/components/schemas/ChatConversation'
+        - type: object
+          properties:
+            messages:
+              type: array
+              items:
+                $ref: '#/components/schemas/ChatMessage'
+            message_count:
+              type: integer
+              example: 8
+
+    ChatMessage:
+      type: object
+      required: [id, conversation_id, user_id, role, content, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/MessageRole'
+        content:
+          type: string
+          example: "You're making excellent progress! You've completed 4 out of 4 workout goals this week."
+        tokens_used:
+          type: integer
+          nullable: true
+          example: 150
+        model_used:
+          type: string
+          nullable: true
+          example: "gpt-4"
+        processing_time_ms:
+          type: integer
+          nullable: true
+          example: 1500
+        metadata:
+          type: object
+          example:
+            goals_referenced: ["goal_id_1", "goal_id_2"]
+            context_sources: ["progress_entries", "goals"]
+        created_at:
+          type: string
+          format: date-time
+
+    ResearchCategory:
+      type: object
+      required: [id, user_id, name, research_prompt, is_active, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+          example: "Investment Opportunities"
+        description:
+          type: string
+          nullable: true
+          example: "Research emerging investment opportunities and market trends"
+        research_prompt:
+          type: string
+          example: "Research the latest investment opportunities, focusing on technology stocks and ETFs..."
+        schedule_config:
+          type: object
+          example:
+            frequency: "weekly"
+            day_of_week: "monday"
+            time: "09:00"
+        target_life_areas:
+          type: array
+          items:
+            type: string
+            format: uuid
+        is_active:
+          type: boolean
+        last_run_at:
+          type: string
+          format: date-time
+          nullable: true
+        next_run_at:
+          type: string
+          format: date-time
+          nullable: true
+        run_count:
+          type: integer
+          default: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ResearchResult:
+      type: object
+      required: [id, category_id, user_id, status, research_date]
+      properties:
+        id:
+          type: string
+          format: uuid
+        category_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 255
+          nullable: true
+          example: "AI & Semiconductor Stocks Analysis"
+        content:
+          type: string
+          nullable: true
+          example: "The AI revolution continues to drive semiconductor demand..."
+        summary:
+          type: string
+          nullable: true
+          example: "Strong growth potential in AI/semiconductor sector. Consider ETF diversification."
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              url:
+                type: string
+                format: uri
+              source:
+                type: string
+        status:
+          $ref: '#/components/schemas/ResearchStatus'
+        quality_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          nullable: true
+          example: 0.92
+        relevance_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          nullable: true
+          example: 0.95
+        research_date:
+          type: string
+          format: date-time
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+        integrated_at:
+          type: string
+          format: date-time
+          nullable: true
+        metadata:
+          type: object
+
+    Notification:
+      type: object
+      required: [id, user_id, title, notification_type, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 255
+          example: "Time to Work Out! 💪"
+        body:
+          type: string
+          nullable: true
+          example: "Your body is your temple. Let's get moving!"
+        notification_type:
+          $ref: '#/components/schemas/NotificationType'
+        related_entity_type:
+          type: string
+          enum: [goal, life_area, research, chat, automation, integration]
+          nullable: true
+        related_entity_id:
+          type: string
+          format: uuid
+          nullable: true
+        action_url:
+          type: string
+          nullable: true
+          example: "/goals/123e4567-e89b-12d3-a456-426614174000"
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 5
+          default: 3
+        scheduled_for:
+          type: string
+          format: date-time
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+        acknowledged_at:
+          type: string
+          format: date-time
+          nullable: true
+        metadata:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    Integration:
+      type: object
+      required: [provider, name, description, is_available]
+      properties:
+        provider:
+          $ref: '#/components/schemas/IntegrationProvider'
+        name:
+          type: string
+          example: "Apple Health"
+        description:
+          type: string
+          example: "Sync health and fitness data from Apple Health app"
+        is_available:
+          type: boolean
+        is_connected:
+          type: boolean
+        capabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationCapability'
+          example: ["health_data_import", "workout_tracking", "heart_rate_monitoring"]
+        setup_instructions:
+          type: string
+          nullable: true
+
+    IntegrationConnection:
+      type: object
+      required: [id, user_id, provider, is_active, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        provider:
+          $ref: '#/components/schemas/IntegrationProvider'
+        connection_data:
+          type: object
+          description: Provider-specific connection data (encrypted)
+        sync_config:
+          type: object
+          example:
+            sync_frequency: "daily"
+            data_types: ["workouts", "weight", "sleep"]
+        is_active:
+          type: boolean
+        last_sync_at:
+          type: string
+          format: date-time
+          nullable: true
+        next_sync_at:
+          type: string
+          format: date-time
+          nullable: true
+        sync_count:
+          type: integer
+          default: 0
+        error_count:
+          type: integer
+          default: 0
+        last_error:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # =============================================
+    # ANALYTICS & DASHBOARD
+    # =============================================
+
+    DashboardData:
+      type: object
+      properties:
+        summary:
+          type: object
+          properties:
+            total_goals:
+              type: integer
+              example: 8
+            active_goals:
+              type: integer
+              example: 6
+            completed_goals:
+              type: integer
+              example: 2
+            total_progress_entries:
+              type: integer
+              example: 156
+            current_streak:
+              type: integer
+              example: 7
+        life_areas:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/LifeArea'
+              - type: object
+                properties:
+                  goals_count:
+                    type: integer
+                  completion_rate:
+                    type: number
+                    minimum: 0
+                    maximum: 100
+        recent_progress:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProgressEntry'
+        upcoming_deadlines:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Goal'
+              - type: object
+                properties:
+                  days_until_deadline:
+                    type: integer
+        ai_insights:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIInsight'
+        research_summary:
+          type: object
+          properties:
+            pending_results:
+              type: integer
+            recent_research:
+              type: array
+              items:
+                $ref: '#/components/schemas/ResearchResult'
+
+    ProgressAnalytics:
+      type: object
+      properties:
+        time_series:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              value:
+                type: number
+              goal_id:
+                type: string
+                format: uuid
+        completion_rates:
+          type: object
+          properties:
+            daily:
+              type: number
+              minimum: 0
+              maximum: 100
+            weekly:
+              type: number
+              minimum: 0
+              maximum: 100
+            monthly:
+              type: number
+              minimum: 0
+              maximum: 100
+        streaks:
+          type: object
+          properties:
+            current_streak:
+              type: integer
+            longest_streak:
+              type: integer
+            streak_by_goal:
+              type: array
+              items:
+                type: object
+                properties:
+                  goal_id:
+                    type: string
+                    format: uuid
+                  goal_title:
+                    type: string
+                  streak:
+                    type: integer
+        patterns:
+          type: object
+          properties:
+            best_days:
+              type: array
+              items:
+                type: string
+                enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+            peak_hours:
+              type: array
+              items:
+                type: integer
+                minimum: 0
+                maximum: 23
+            seasonal_trends:
+              type: object
+
+    TrendAnalysis:
+      type: object
+      properties:
+        overall_trend:
+          type: string
+          enum: [improving, stable, declining]
+          example: "improving"
+        trend_strength:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.75
+        goal_trends:
+          type: array
+          items:
+            type: object
+            properties:
+              goal_id:
+                type: string
+                format: uuid
+              goal_title:
+                type: string
+              trend:
+                type: string
+                enum: [improving, stable, declining]
+              confidence:
+                type: number
+                minimum: 0
+                maximum: 1
+        predictions:
+          type: object
+          properties:
+            completion_likelihood:
+              type: array
+              items:
+                type: object
+                properties:
+                  goal_id:
+                    type: string
+                    format: uuid
+                  probability:
+                    type: number
+                    minimum: 0
+                    maximum: 1
+            optimal_adjustments:
+              type: array
+              items:
+                type: object
+                properties:
+                  goal_id:
+                    type: string
+                    format: uuid
+                  recommendation:
+                    type: string
+                  impact_score:
+                    type: number
+
+    AIInsight:
+      type: object
+      required: [id, user_id, insight_type, title, content, generated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        insight_type:
+          $ref: '#/components/schemas/AIInsightType'
+        title:
+          type: string
+          example: "Workout Consistency Pattern"
+        content:
+          type: string
+          example: "Your workout consistency is excellent! You've maintained a 100% completion rate..."
+        confidence_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.89
+        data_sources:
+          type: array
+          items:
+            type: string
+          example: ["progress_entries", "automation_logs"]
+        related_entities:
+          type: object
+          example:
+            goals: ["goal_id_1"]
+            life_areas: ["life_area_id_1"]
+        is_dismissed:
+          type: boolean
+          default: false
+        is_acted_upon:
+          type: boolean
+          default: false
+        generated_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    # =============================================
+    # REQUEST SCHEMAS
+    # =============================================
+
+    CreateLifeAreaRequest:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: "Health & Fitness"
+        type:
+          $ref: '#/components/schemas/LifeAreaType'
+        description:
+          type: string
+          example: "Physical and mental wellbeing"
+        icon:
+          type: string
+          maxLength: 100
+          example: "heart.fill"
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          example: "#FF6B6B"
+          description: "Hex color code - must be exactly 6 hexadecimal characters prefixed with #"
+        configuration:
+          type: object
+          example:
+            tracking_methods: ["workouts", "weight"]
+        sort_order:
+          type: integer
+          minimum: 0
+
+    UpdateLifeAreaRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        icon:
+          type: string
+          maxLength: 100
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        configuration:
+          type: object
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+          minimum: 0
+
+    CreateGoalRequest:
+      type: object
+      required: [life_area_id, title, goal_type]
+      properties:
+        life_area_id:
+          type: string
+          format: uuid
+          description: "Must reference an existing life area belonging to the user"
+        parent_goal_id:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+          maxLength: 255
+          example: "Read 24 books this year"
+        description:
+          type: string
+          example: "Expand knowledge through reading"
+        goal_type:
+          $ref: '#/components/schemas/GoalType'
+        target_value:
+          type: number
+          example: 24
+        target_unit:
+          type: string
+          maxLength: 50
+          example: "books"
+        deadline:
+          type: string
+          format: date
+          example: "2025-12-31"
+          description: "Goal deadline - must be a future date"
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 5
+          default: 3
+        metadata:
+          type: object
+        reminder_config:
+          type: object
+
+    UpdateGoalRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        target_value:
+          type: number
+        target_unit:
+          type: string
+          maxLength: 50
+        deadline:
+          type: string
+          format: date
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 5
+        status:
+          $ref: '#/components/schemas/GoalStatus'
+        metadata:
+          type: object
+        reminder_config:
+          type: object
+
+    CreateProgressEntryRequest:
+      type: object
+      required: [entry_date]
+      properties:
+        entry_date:
+          type: string
+          format: date
+          example: "2025-08-03"
+        value:
+          type: number
+          example: 1
+        notes:
+          type: string
+          example: "Finished reading 'Atomic Habits'"
+        metadata:
+          type: object
+        attachments:
+          type: array
+          items:
+            type: object
+
+    UpdateProgressEntryRequest:
+      type: object
+      properties:
+        entry_date:
+          type: string
+          format: date
+        value:
+          type: number
+        notes:
+          type: string
+        metadata:
+          type: object
+        attachments:
+          type: array
+          items:
+            type: object
+
+    CreateResearchCategoryRequest:
+      type: object
+      required: [name, research_prompt]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: "Investment Opportunities"
+        description:
+          type: string
+          example: "Research emerging investment trends"
+        research_prompt:
+          type: string
+          example: "Research the latest investment opportunities in technology..."
+        schedule_config:
+          type: object
+          example:
+            frequency: "weekly"
+            day_of_week: "monday"
+            time: "09:00"
+        target_life_areas:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    UpdateResearchCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        research_prompt:
+          type: string
+        schedule_config:
+          type: object
+        target_life_areas:
+          type: array
+          items:
+            type: string
+            format: uuid
+        is_active:
+          type: boolean
+
+    # =============================================
+    # RESPONSE SCHEMAS
+    # =============================================
+
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        meta:
+          type: object
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+              example: "2025-08-03T15:30:00Z"
+
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "Invalid input data"
+            details:
+              type: object
+        meta:
+          type: object
+          required: [timestamp, request_id]
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+              example: "2025-08-03T15:30:00Z"
+            request_id:
+              type: string
+              format: uuid
+              example: "req_123e4567-e89b-12d3-a456-426614174000"
+
+    PaginationMeta:
+      type: object
+      properties:
+        pagination:
+          type: object
+          required: [page, limit, total, has_more]
+          properties:
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 20
+            total:
+              type: integer
+              example: 156
+            has_more:
+              type: boolean
+              example: true
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-08-03T15:30:00Z"
+
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input data
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "VALIDATION_ERROR"
+                      message:
+                        example: "Invalid input data"
+                      details:
+                        type: object
+                        example:
+                          field_errors:
+                            title: "Title is required"
+                            target_value: "Must be a positive number"
+
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "UNAUTHORIZED"
+                      message:
+                        example: "Invalid or expired authentication token"
+
+    NotFound:
+      description: Not found - Requested resource does not exist
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "NOT_FOUND"
+                      message:
+                        example: "Requested resource not found"
+
+    RateLimited:
+      description: Too many requests - Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          description: Request limit per time window
+          schema:
+            type: integer
+            example: 100
+        X-RateLimit-Remaining:
+          description: Remaining requests in current window
+          schema:
+            type: integer
+            example: 0
+        X-RateLimit-Reset:
+          description: Time when rate limit resets (Unix timestamp)
+          schema:
+            type: integer
+            example: 1691234567
+        Retry-After:
+          description: Seconds to wait before retrying
+          schema:
+            type: integer
+            example: 60
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "RATE_LIMITED"
+                      message:
+                        example: "Rate limit exceeded. Please try again later."
+                      details:
+                        type: object
+                        properties:
+                          retry_after:
+                            type: integer
+                            example: 60
+                            description: Seconds to wait before retrying
+
+    Forbidden:
+      description: Forbidden - Access denied to resource
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "FORBIDDEN"
+                      message:
+                        example: "Access denied to this resource"
+
+    UnprocessableEntity:
+      description: Unprocessable Entity - Validation failed
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "VALIDATION_FAILED"
+                      message:
+                        example: "Semantic validation failed"
+                      details:
+                        type: object
+                        example:
+                          field_errors:
+                            parent_goal_id: "Parent goal does not exist"
+                            deadline: "Deadline must be in the future"
+
+    Conflict:
+      description: Conflict - Resource already exists or conflicting state
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "CONFLICT"
+                      message:
+                        example: "Resource already exists or is in conflicting state"
+
+    InternalServerError:
+      description: Internal Server Error - Unexpected server error
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "INTERNAL_SERVER_ERROR"
+                      message:
+                        example: "An unexpected error occurred"
+                      details:
+                        type: object
+                        properties:
+                          incident_id:
+                            type: string
+                            format: uuid
+                            example: "inc_123e4567-e89b-12d3-a456-426614174000"
+
+# =============================================
+# TAGS DEFINITION
+# =============================================
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Life Areas
+    description: Life area management for goal organization
+  - name: Goals
+    description: Goal creation, tracking, and progress management
+  - name: AI Chat
+    description: Jarvis AI assistant conversation interface
+  - name: Research Engine
+    description: Automated research categories and results
+  - name: Dashboard
+    description: Dashboard overview and summary data
+  - name: Analytics
+    description: Progress analytics and trend analysis
+  - name: Integrations
+    description: Third-party service integrations
+  - name: Notifications
+    description: User notification management

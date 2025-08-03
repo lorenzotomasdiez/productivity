@@ -1,0 +1,496 @@
+# =============================================
+# JARVIS PROJECT - COMPREHENSIVE .GITIGNORE
+# =============================================
+
+# =============================================
+# NODE.JS / BACKEND
+# =============================================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Jest cache
+.jest/
+
+# =============================================
+# ENVIRONMENT VARIABLES & SECRETS
+# =============================================
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Environment files in subdirectories
+backend/**/.env
+backend/**/.env.*
+docker/**/.env
+docker/**/.env.*
+
+# Secrets and certificates
+secrets/
+certs/
+*.pem
+*.p8
+*.key
+*.crt
+*.cert
+private-key*
+apple-private-key*
+
+# API keys and tokens
+api-keys.json
+tokens.json
+credentials.json
+
+# =============================================
+# LOGS & TEMPORARY FILES
+# =============================================
+
+# Log files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# =============================================
+# DATABASES & STORAGE
+# =============================================
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Database dumps and backups
+*.sql.backup
+*.dump
+backup/
+dumps/
+
+# File uploads
+uploads/
+storage/
+media/
+
+# =============================================
+# DOCKER & CONTAINERS
+# =============================================
+
+# Docker volumes and data
+docker-data/
+postgres-data/
+redis-data/
+
+# Docker environment files
+docker-compose.override.yml
+
+# =============================================
+# SWIFT / XCODE / IOS / MACOS
+# =============================================
+
+# Xcode
+build/
+DerivedData/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.xcscmblueprint
+*.xcscheme
+
+# CocoaPods
+Pods/
+*.xcworkspace
+
+# Carthage
+Carthage/Build/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Code Injection
+iOSInjectionProject/
+
+# Xcode Patch
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcodeproj/project.xcworkspace/xcshareddata/
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# =============================================
+# PYTHON (AI SERVICE)
+# =============================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+local_settings.py
+db.sqlite3
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# =============================================
+# EDITORS & IDES
+# =============================================
+
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+.netrwhist
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# =============================================
+# TESTING & CI/CD
+# =============================================
+
+# Test results
+test-results/
+test-output/
+coverage/
+.jest/
+
+# Screenshots and recordings from tests
+screenshots/
+recordings/
+test-screenshots/
+
+# =============================================
+# DEPLOYMENT & PRODUCTION
+# =============================================
+
+# Production builds
+build/
+dist/
+out/
+
+# Deployment artifacts
+deploy/
+releases/
+
+# Monitoring and analytics
+analytics/
+monitoring/
+
+# =============================================
+# PROJECT SPECIFIC
+# =============================================
+
+# Generated documentation
+docs/generated/
+api-docs/
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Local configuration overrides
+local.config.js
+local.settings.json
+
+# Development notes (but keep main documentation)
+notes/
+scratch/
+TODO.local.md
+
+# AI training data or large datasets
+training-data/
+datasets/
+*.model
+
+# =============================================
+# SECURITY & COMPLIANCE
+# =============================================
+
+# Security scan results
+security-reports/
+vulnerability-reports/
+
+# Compliance documents (if containing sensitive info)
+# Keep template versions, ignore filled ones
+compliance/filled/
+audit-reports/
+
+# =============================================
+# KEEP THESE FILES (IMPORTANT)
+# =============================================
+
+# Keep example/template files
+!*.example
+!*.template
+!*-template.*
+!*-example.*
+
+# Keep documentation
+!README.md
+!CHANGELOG.md
+!LICENSE
+!CONTRIBUTING.md
+!CODE_OF_CONDUCT.md
+
+# Keep configuration templates
+!docker-compose.example.yml
+!.env.example
+!config.example.json
+
+# Keep essential project files
+!package.json
+!Package.swift
+!Dockerfile
+!docker-compose.yml
+!openapi.yaml
+!schema.sql
+!*.md
