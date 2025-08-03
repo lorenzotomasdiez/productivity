@@ -24,8 +24,8 @@ export class GoalController {
       if (req.query.status && Object.values(GoalStatus).includes(req.query.status as GoalStatus)) {
         filters.status = req.query.status as GoalStatus;
       }
-      if (req.query.goal_type && Object.values(GoalType).includes(req.query.goal_type as GoalType)) {
-        filters.goalType = req.query.goal_type as GoalType;
+      if (req.query.goalType && Object.values(GoalType).includes(req.query.goalType as GoalType)) {
+        filters.goalType = req.query.goalType as GoalType;
       }
       if (req.query.parent_goal_id !== undefined) {
         filters.parentGoalId = req.query.parent_goal_id === 'null' ? null : req.query.parent_goal_id as string;
@@ -151,7 +151,7 @@ export class GoalController {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
-      const { progress } = req.body;
+      const { currentValue } = req.body;
 
       if (!userId) {
         res.status(401).json({ 
@@ -161,15 +161,15 @@ export class GoalController {
         return;
       }
 
-      if (typeof progress !== 'number') {
+      if (typeof currentValue !== 'number') {
         res.status(400).json({
           success: false,
-          error: { code: 'VALIDATION_ERROR', message: 'Progress must be a number' },
+          error: { code: 'VALIDATION_ERROR', message: 'currentValue must be a number' },
         });
         return;
       }
 
-      const updatedGoal = await GoalService.updateGoalProgress(id!, userId, progress);
+      const updatedGoal = await GoalService.updateGoalProgress(id!, userId, currentValue);
 
       res.status(200).json({
         success: true,
