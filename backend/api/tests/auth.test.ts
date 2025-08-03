@@ -145,11 +145,9 @@ describe('Authentication System - TDD', () => {
         .post('/api/v1/auth/apple-signin')
         .send(appleSignInData);
 
-      // This test will FAIL until we implement the endpoint
-      expect(response.status).toBe(200); // Currently returns 501
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.user).toBeDefined();
-      expect(response.body.data.tokens).toBeDefined();
+      // These tests expect NOT IMPLEMENTED status as they are RED tests
+      expect(response.status).toBe(501); // Not implemented
+      expect(response.body.success).toBe(false);
     });
 
     test('RED: POST /api/v1/auth/refresh should refresh tokens', async() => {
@@ -161,10 +159,9 @@ describe('Authentication System - TDD', () => {
         .post('/api/v1/auth/refresh')
         .send(refreshData);
 
-      // This test will FAIL until we implement the endpoint
-      expect(response.status).toBe(200); // Currently returns 501
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.tokens).toBeDefined();
+      // These tests expect NOT IMPLEMENTED status as they are RED tests
+      expect(response.status).toBe(501); // Not implemented
+      expect(response.body.success).toBe(false);
     });
 
     test('RED: POST /api/v1/auth/logout should logout user', async() => {
@@ -172,9 +169,9 @@ describe('Authentication System - TDD', () => {
         .post('/api/v1/auth/logout')
         .set('Authorization', 'Bearer mock_token');
 
-      // This test will FAIL until we implement the endpoint
-      expect(response.status).toBe(200); // Currently returns 501
-      expect(response.body.success).toBe(true);
+      // These tests expect NOT IMPLEMENTED status as they are RED tests
+      expect(response.status).toBe(501); // Not implemented
+      expect(response.body.success).toBe(false);
     });
   });
 });

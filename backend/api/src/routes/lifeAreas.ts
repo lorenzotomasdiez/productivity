@@ -1,40 +1,24 @@
 import express from 'express';
-import { logger } from '../config/logger.js';
+import { LifeAreaController } from '../controllers/LifeAreaController.js';
 
 const router = express.Router();
 
 // GET /api/v1/life-areas
-router.get('/', async(req, res, next) => {
-  try {
-    logger.info('Get life areas endpoint called');
-    
-    res.status(501).json({
-      success: false,
-      error: {
-        code: 'NOT_IMPLEMENTED',
-        message: 'Life areas endpoints not yet implemented - coming in TDD phase',
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+router.get('/', LifeAreaController.getLifeAreas);
 
 // POST /api/v1/life-areas
-router.post('/', async(req, res, next) => {
-  try {
-    logger.info('Create life area endpoint called');
-    
-    res.status(501).json({
-      success: false,
-      error: {
-        code: 'NOT_IMPLEMENTED',
-        message: 'Life areas endpoints not yet implemented - coming in TDD phase',
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+router.post('/', LifeAreaController.createLifeArea);
+
+// GET /api/v1/life-areas/:id
+router.get('/:id', LifeAreaController.getLifeAreaById);
+
+// PUT /api/v1/life-areas/:id
+router.put('/:id', LifeAreaController.updateLifeArea);
+
+// DELETE /api/v1/life-areas/:id
+router.delete('/:id', LifeAreaController.deleteLifeArea);
+
+// POST /api/v1/life-areas/reorder
+router.post('/reorder', LifeAreaController.reorderLifeAreas);
 
 export { router as lifeAreasRouter };

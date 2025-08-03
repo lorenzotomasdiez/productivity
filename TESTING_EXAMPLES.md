@@ -4,10 +4,10 @@
 ## Example 1: Goal Progress Calculation (Backend)
 
 ### Step 1: Write Failing Test First
-```javascript
-// /backend/tests/unit/models/Goal.test.js
-import { Goal } from '../../../src/models/Goal.js';
-import { ProgressEntry } from '../../../src/models/ProgressEntry.js';
+```typescript
+// /backend/tests/unit/models/Goal.test.ts
+import { Goal } from '../../../src/models/Goal';
+import { ProgressEntry } from '../../../src/models/ProgressEntry';
 
 describe('Goal Model', () => {
   describe('progress calculation', () => {
@@ -51,7 +51,7 @@ describe('Goal Model', () => {
         target_value: 1 // per day
       });
 
-      const progressEntries = [
+      const progressEntries: ProgressEntry[] = [
         { entry_date: '2025-01-01', value: 1 },
         { entry_date: '2025-01-02', value: 1 },
         { entry_date: '2025-01-03', value: 1 }
@@ -69,41 +69,53 @@ describe('Goal Model', () => {
 
 ### Step 2: Run Test (Should Fail)
 ```bash
-npm test -- Goal.test.js
+npm test -- Goal.test.ts
 # Test fails: Goal.getProgressPercentage is not a function
 ```
 
 ### Step 3: Write Minimal Code to Pass
-```javascript
-// /backend/src/models/Goal.js
+```typescript
+// /backend/src/models/Goal.ts
+export interface GoalData {
+  title: string;
+  goal_type: 'numeric' | 'habit' | 'milestone' | 'binary';
+  target_value: number;
+  current_value?: number;
+}
+
 export class Goal {
-  constructor(data) {
+  public title: string;
+  public goal_type: GoalData['goal_type'];
+  public target_value: number;
+  public current_value: number;
+
+  constructor(data: GoalData) {
     this.title = data.title;
     this.goal_type = data.goal_type;
     this.target_value = data.target_value;
     this.current_value = data.current_value || 0;
   }
 
-  getProgressPercentage() {
+  getProgressPercentage(): number {
     if (this.target_value === 0) return 0;
     
     const percentage = (this.current_value / this.target_value) * 100;
     return Math.min(percentage, 100);
   }
 
-  calculateStreak(progressEntries) {
+  calculateStreak(progressEntries: ProgressEntry[]): number {
     if (!progressEntries || progressEntries.length === 0) return 0;
     
     // Sort entries by date descending
     const sortedEntries = progressEntries
-      .sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date));
+      .sort((a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime());
     
     let streak = 0;
     let currentDate = new Date();
     
     for (const entry of sortedEntries) {
       const entryDate = new Date(entry.entry_date);
-      const daysDiff = Math.floor((currentDate - entryDate) / (1000 * 60 * 60 * 24));
+      const daysDiff = Math.floor((currentDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
       
       if (daysDiff === streak) {
         streak++;
@@ -120,22 +132,39 @@ export class Goal {
 
 ### Step 4: Run Test (Should Pass)
 ```bash
-npm test -- Goal.test.js
+npm test -- Goal.test.ts
 # ✓ All tests passing
 ```
 
 ### Step 5: Refactor (Improve Code Quality)
-```javascript
-// /backend/src/models/Goal.js
+```typescript
+// /backend/src/models/Goal.ts
+export interface GoalData {
+  title: string;
+  goal_type: 'numeric' | 'habit' | 'milestone' | 'binary';
+  target_value: number;
+  current_value?: number;
+}
+
+export interface ProgressEntry {
+  entry_date: string;
+  value: number;
+}
+
 export class Goal {
-  constructor(data) {
+  public title: string;
+  public goal_type: GoalData['goal_type'];
+  public target_value: number;
+  public current_value: number;
+
+  constructor(data: GoalData) {
     this.title = data.title;
     this.goal_type = data.goal_type;
     this.target_value = data.target_value;
     this.current_value = data.current_value || 0;
   }
 
-  getProgressPercentage() {
+  getProgressPercentage(): number {
     if (!this.target_value || this.target_value === 0) {
       return 0;
     }
@@ -144,18 +173,18 @@ export class Goal {
     return Math.min(Math.round(percentage * 100) / 100, 100); // Round to 2 decimals
   }
 
-  calculateStreak(progressEntries) {
+  calculateStreak(progressEntries: ProgressEntry[]): number {
     if (!progressEntries?.length) return 0;
     
     const sortedEntries = this._sortEntriesByDateDesc(progressEntries);
     return this._countConsecutiveDays(sortedEntries);
   }
 
-  _sortEntriesByDateDesc(entries) {
-    return entries.sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date));
+  private _sortEntriesByDateDesc(entries: ProgressEntry[]): ProgressEntry[] {
+    return entries.sort((a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime());
   }
 
-  _countConsecutiveDays(sortedEntries) {
+  private _countConsecutiveDays(sortedEntries: ProgressEntry[]): number {
     let streak = 0;
     let currentDate = new Date();
     
@@ -171,9 +200,9 @@ export class Goal {
     return streak;
   }
 
-  _isConsecutiveDay(entryDate, currentDate, expectedDaysDiff) {
+  private _isConsecutiveDay(entryDate: string, currentDate: Date, expectedDaysDiff: number): boolean {
     const entryDateObj = new Date(entryDate);
-    const daysDiff = Math.floor((currentDate - entryDateObj) / (1000 * 60 * 60 * 24));
+    const daysDiff = Math.floor((currentDate.getTime() - entryDateObj.getTime()) / (1000 * 60 * 60 * 24));
     return daysDiff === expectedDaysDiff;
   }
 }
@@ -182,16 +211,16 @@ export class Goal {
 ## Example 2: API Endpoint Testing (Backend)
 
 ### Step 1: Write Integration Test First
-```javascript
-// /backend/tests/integration/api/goals.test.js
+```typescript
+// /backend/tests/integration/api/goals.test.ts
 import request from 'supertest';
-import { app } from '../../../src/app.js';
-import { setupTestDatabase, cleanupTestDatabase } from '../../utils/testDatabase.js';
-import { createTestUser, generateTestToken, createTestGoals } from '../../fixtures/users.js';
+import { app } from '../../../src/app';
+import { setupTestDatabase, cleanupTestDatabase } from '../../utils/testDatabase';
+import { createTestUser, generateTestToken, createTestGoals } from '../../fixtures/users';
 
 describe('Goals API', () => {
-  let testUser;
-  let authToken;
+  let testUser: any;
+  let authToken: string;
 
   beforeAll(async () => {
     await setupTestDatabase();
@@ -212,7 +241,7 @@ describe('Goals API', () => {
       const goalData = {
         title: 'Read 24 books this year',
         description: 'Expand knowledge through reading',
-        goal_type: 'numeric',
+        goal_type: 'numeric' as const,
         target_value: 24,
         target_unit: 'books',
         deadline: '2025-12-31'
@@ -313,16 +342,16 @@ describe('Goals API', () => {
 ```
 
 ### Step 2: Write API Route (Minimal Implementation)
-```javascript
-// /backend/src/routes/goals.js
-import express from 'express';
-import { GoalService } from '../services/GoalService.js';
-import { authenticate } from '../middleware/auth.js';
-import { validateGoalData } from '../middleware/validation.js';
+```typescript
+// /backend/src/routes/goals.ts
+import express, { Request, Response } from 'express';
+import { GoalService } from '../services/GoalService';
+import { authenticate } from '../middleware/auth';
+import { validateGoalData } from '../middleware/validation';
 
 const router = express.Router();
 
-router.post('/', authenticate, validateGoalData, async (req, res) => { // FIXED: Use '/' since router is mounted at '/api/v1/goals'
+router.post('/', authenticate, validateGoalData, async (req: Request, res: Response) => {
   try {
     const goalData = {
       ...req.body,
@@ -340,20 +369,20 @@ router.post('/', authenticate, validateGoalData, async (req, res) => { // FIXED:
       success: false,
       error: {
         code: 'GOAL_CREATION_ERROR',
-        message: error.message
+        message: error instanceof Error ? error.message : 'Unknown error'
       }
     });
   }
 });
 
-router.get('/', authenticate, async (req, res) => { // FIXED: Use '/' since router is mounted at '/api/v1/goals'
+router.get('/', authenticate, async (req: Request, res: Response) => {
   try {
     const { limit = 10, page = 1, status } = req.query;
     
     const result = await GoalService.findByUser(req.user.id, {
-      limit: parseInt(limit),
-      page: parseInt(page),
-      status
+      limit: parseInt(limit as string),
+      page: parseInt(page as string),
+      status: status as string
     });
 
     res.json({
@@ -368,7 +397,7 @@ router.get('/', authenticate, async (req, res) => { // FIXED: Use '/' since rout
       success: false,
       error: {
         code: 'GOALS_FETCH_ERROR',
-        message: error.message
+        message: error instanceof Error ? error.message : 'Unknown error'
       }
     });
   }
@@ -635,14 +664,14 @@ class GoalListViewModelTests: XCTestCase {
 ## Example 4: AI Service Testing with Mocks
 
 ### Step 1: Write AI Service Test
-```javascript
-// /backend/tests/unit/services/AIService.test.js
-import { AIService } from '../../../src/services/AIService.js';
-import { MockOpenAIClient } from '../../mocks/OpenAIClient.js';
+```typescript
+// /backend/tests/unit/services/AIService.test.ts
+import { AIService } from '../../../src/services/AIService';
+import { MockOpenAIClient } from '../../mocks/OpenAIClient';
 
 describe('AIService', () => {
-  let aiService;
-  let mockOpenAI;
+  let aiService: AIService;
+  let mockOpenAI: MockOpenAIClient;
 
   beforeEach(() => {
     mockOpenAI = new MockOpenAIClient();
@@ -748,17 +777,51 @@ describe('AIService', () => {
 ```
 
 ### Step 2: Implement AI Service
-```javascript
-// /backend/src/services/AIService.js
+```typescript
+// /backend/src/services/AIService.ts
+interface UserContext {
+  user_id: string;
+  goals?: Array<{ title: string; progress: number }>;
+  recent_progress?: Array<{ goal: string; value: number; date: string }>;
+  life_areas?: Array<any>;
+}
+
+interface AIResponse {
+  content: string;
+  context_data: {
+    goals_referenced: string[];
+    data_sources: string[];
+    response_type: string;
+  };
+  metadata: {
+    tokens_used: number;
+    model_used: string;
+    processing_time: number;
+  };
+}
+
+interface Insight {
+  type: string;
+  title: string;
+  content: string;
+  confidence_score: number;
+  generated_at: string;
+  processing_time: number;
+}
+
 export class AIService {
-  constructor(openaiClient, config = {}) {
+  private openai: any;
+  private model: string;
+  private maxTokens: number;
+
+  constructor(openaiClient: any, config: { model?: string; maxTokens?: number } = {}) {
     this.openai = openaiClient;
     this.model = config.model || 'gpt-4';
     this.maxTokens = config.maxTokens || 1000;
   }
 
-  async generateResponse(message, userContext) {
-    const startTime = Date.now(); // FIXED: Declare startTime variable
+  async generateResponse(message: string, userContext: UserContext): Promise<AIResponse> {
+    const startTime = Date.now();
     try {
       const systemPrompt = this._buildSystemPrompt(userContext);
       const userPrompt = this._buildUserPrompt(message, userContext);
@@ -787,7 +850,7 @@ export class AIService {
     }
   }
 
-  _buildSystemPrompt(userContext) {
+  private _buildSystemPrompt(userContext: UserContext): string {
     return `You are Jarvis, a personal AI assistant for life management.
     
 User Context:
@@ -798,7 +861,7 @@ User Context:
 Be helpful, encouraging, and provide actionable insights based on the user's data.`;
   }
 
-  _buildUserPrompt(message, userContext) {
+  private _buildUserPrompt(message: string, userContext: UserContext): string {
     return `${message}
 
 Recent Progress:
@@ -807,7 +870,7 @@ ${userContext.recent_progress?.map(p =>
 ).join('\n') || 'No recent progress'}`;
   }
 
-  _extractContextData(userContext, aiResponse) {
+  private _extractContextData(userContext: UserContext, aiResponse: any) {
     return {
       goals_referenced: this._findReferencedGoals(userContext.goals, aiResponse),
       data_sources: this._identifyDataSources(userContext),
@@ -815,8 +878,7 @@ ${userContext.recent_progress?.map(p =>
     };
   }
 
-  // FIXED: Add missing methods referenced in tests
-  _findReferencedGoals(goals, aiResponse) {
+  private _findReferencedGoals(goals: UserContext['goals'], aiResponse: any): string[] {
     if (!goals || !aiResponse.choices?.[0]?.message?.content) return [];
     
     const responseContent = aiResponse.choices[0].message.content.toLowerCase();
@@ -825,16 +887,15 @@ ${userContext.recent_progress?.map(p =>
       .map(goal => goal.title);
   }
 
-  _identifyDataSources(userContext) {
-    const sources = [];
+  private _identifyDataSources(userContext: UserContext): string[] {
+    const sources: string[] = [];
     if (userContext.goals?.length > 0) sources.push('goals');
     if (userContext.recent_progress?.length > 0) sources.push('recent_progress');
     if (userContext.life_areas?.length > 0) sources.push('life_areas');
     return sources;
   }
 
-  // FIXED: Add missing generateInsights method
-  async generateInsights(userData) {
+  async generateInsights(userData: any): Promise<Insight[]> {
     const startTime = Date.now();
     try {
       const analysisPrompt = this._buildAnalysisPrompt(userData);
@@ -854,7 +915,7 @@ ${userContext.recent_progress?.map(p =>
 
       const insights = JSON.parse(response.choices[0].message.content);
       
-      return insights.insights.map(insight => ({
+      return insights.insights.map((insight: any) => ({
         ...insight,
         confidence_score: this._calculateConfidenceScore(insight, userData),
         generated_at: new Date().toISOString(),
@@ -865,7 +926,7 @@ ${userContext.recent_progress?.map(p =>
     }
   }
 
-  _buildAnalysisPrompt(userData) {
+  private _buildAnalysisPrompt(userData: any): string {
     return `Analyze this user data and provide insights:
     
 Goals: ${JSON.stringify(userData.goals)}
@@ -883,7 +944,7 @@ Return insights in this JSON format:
 }`;
   }
 
-  _calculateConfidenceScore(insight, userData) {
+  private _calculateConfidenceScore(insight: any, userData: any): number {
     // Simple confidence calculation based on data availability
     let score = 0.5;
     if (userData.progress_entries?.length > 5) score += 0.2;
@@ -897,8 +958,8 @@ Return insights in this JSON format:
 ## Test Utilities and Mock Implementations
 
 ### Missing Test Database Utilities
-```javascript
-// /backend/tests/utils/testDatabase.js
+```typescript
+// /backend/tests/utils/testDatabase.ts
 import { Pool } from 'pg';
 import fs from 'fs/promises';
 import path from 'path';
@@ -907,7 +968,7 @@ const testPool = new Pool({
   connectionString: process.env.TEST_DATABASE_URL || 'postgresql://test:test@localhost:5432/jarvis_test'
 });
 
-export async function setupTestDatabase() {
+export async function setupTestDatabase(): Promise<void> {
   try {
     // Create test database schema
     const schemaSQL = await fs.readFile(
@@ -928,7 +989,7 @@ export async function setupTestDatabase() {
   }
 }
 
-export async function cleanupTestDatabase() {
+export async function cleanupTestDatabase(): Promise<void> {
   try {
     // Drop all tables to ensure clean state
     await testPool.query(`
@@ -943,16 +1004,16 @@ export async function cleanupTestDatabase() {
   }
 }
 
-export function getTestDatabase() {
+export function getTestDatabase(): Pool {
   return testPool;
 }
 ```
 
 ### Missing User Test Fixtures
-```javascript
-// /backend/tests/fixtures/users.js
+```typescript
+// /backend/tests/fixtures/users.ts
 import jwt from 'jsonwebtoken';
-import { getTestDatabase } from '../utils/testDatabase.js';
+import { getTestDatabase } from '../utils/testDatabase';
 
 export const testUsers = {
   lorenzo: {
@@ -963,7 +1024,7 @@ export const testUsers = {
   }
 };
 
-export async function createTestUser(userData = {}) {
+export async function createTestUser(userData: Partial<typeof testUsers.lorenzo> = {}): Promise<any> {
   const db = getTestDatabase();
   const user = { ...testUsers.lorenzo, ...userData };
   
@@ -976,7 +1037,7 @@ export async function createTestUser(userData = {}) {
   return result.rows[0];
 }
 
-export function generateTestToken(userId) {
+export function generateTestToken(userId: string): string {
   return jwt.sign(
     { user_id: userId, type: 'access' },
     process.env.JWT_SECRET || 'test-secret',
@@ -984,9 +1045,9 @@ export function generateTestToken(userId) {
   );
 }
 
-export async function createTestGoals(userId, count = 1) {
+export async function createTestGoals(userId: string, count: number = 1): Promise<any[]> {
   const db = getTestDatabase();
-  const goals = [];
+  const goals: any[] = [];
   
   for (let i = 0; i < count; i++) {
     const result = await db.query(`
@@ -1003,16 +1064,14 @@ export async function createTestGoals(userId, count = 1) {
 ```
 
 ### Missing AI Service Mocks
-```javascript
-// /backend/tests/mocks/OpenAIClient.js
+```typescript
+// /backend/tests/mocks/OpenAIClient.ts
 export class MockOpenAIClient {
-  constructor() {
-    this.mockResponses = [];
-    this.mockErrors = [];
-    this.callHistory = [];
-  }
+  private mockResponses: any[] = [];
+  private mockErrors: Error[] = [];
+  private callHistory: any[] = [];
   
-  mockResponse(response) {
+  mockResponse(response: { content: string; usage?: { total_tokens: number } }): void {
     this.mockResponses.push({
       choices: [{
         message: {
@@ -1023,18 +1082,18 @@ export class MockOpenAIClient {
     });
   }
   
-  mockError(error) {
+  mockError(error: Error): void {
     this.mockErrors.push(error);
   }
   
-  getLastCall() {
+  getLastCall(): any {
     return this.callHistory[this.callHistory.length - 1];
   }
   
   get chat() {
     return {
       completions: {
-        create: async (params) => {
+        create: async (params: any) => {
           this.callHistory.push(params);
           
           if (this.mockErrors.length > 0) {
@@ -1230,7 +1289,7 @@ enum GoalType: String, CaseIterable {
 ```
 
 ### Complete TDD Cycle Example (Fixing Missing Red Phase)
-```javascript
+```typescript
 // Example showing complete Red-Green-Refactor cycle
 describe('Complete TDD Example: Goal Completion Logic', () => {
   test('STEP 1 (RED): should mark goal as completed when target reached', () => {
@@ -1253,7 +1312,12 @@ describe('Complete TDD Example: Goal Completion Logic', () => {
 
 // STEP 2 (GREEN): Add minimal implementation to make test pass
 export class Goal {
-  constructor(data) {
+  public title: string;
+  public goal_type: GoalData['goal_type'];
+  public target_value: number;
+  public current_value: number;
+
+  constructor(data: GoalData) {
     this.title = data.title;
     this.goal_type = data.goal_type;
     this.target_value = data.target_value;
@@ -1261,7 +1325,7 @@ export class Goal {
   }
 
   // Minimal implementation to make test pass
-  isCompleted() {
+  isCompleted(): boolean {
     if (this.goal_type === 'numeric') {
       return this.current_value >= this.target_value;
     }
@@ -1271,7 +1335,13 @@ export class Goal {
 
 // STEP 3 (REFACTOR): Improve implementation while keeping tests green
 export class Goal {
-  constructor(data) {
+  public title: string;
+  public goal_type: GoalData['goal_type'];
+  public target_value: number;
+  public current_value: number;
+  public status: string;
+
+  constructor(data: GoalData) {
     this.title = data.title;
     this.goal_type = data.goal_type;
     this.target_value = data.target_value;
@@ -1279,7 +1349,7 @@ export class Goal {
     this.status = data.status || 'active';
   }
 
-  isCompleted() {
+  isCompleted(): boolean {
     // Improved implementation supporting different goal types
     switch (this.goal_type) {
       case 'numeric':
@@ -1296,7 +1366,7 @@ export class Goal {
   }
 
   // Additional methods discovered during refactoring
-  getCompletionPercentage() {
+  getCompletionPercentage(): number {
     if (this.goal_type === 'numeric' && this.target_value > 0) {
       return Math.min((this.current_value / this.target_value) * 100, 100);
     }
