@@ -4,7 +4,7 @@ import { logger } from '../config/logger.js';
 const router = express.Router();
 
 // GET /api/v1/integrations
-router.get('/', async (req, res, next) => {
+router.get('/', async(req, res, next) => {
   try {
     logger.info('Get integrations endpoint called');
     
@@ -21,7 +21,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // POST /api/v1/integrations/connect
-router.post('/connect', async (req, res, next) => {
+router.post('/connect', async(req, res, next) => {
   try {
     logger.info('Connect integration endpoint called');
     

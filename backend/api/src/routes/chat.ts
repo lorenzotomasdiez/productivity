@@ -4,7 +4,7 @@ import { logger } from '../config/logger.js';
 const router = express.Router();
 
 // GET /api/v1/chat/conversations
-router.get('/conversations', async (req, res, next) => {
+router.get('/conversations', async(req, res, next) => {
   try {
     logger.info('Get chat conversations endpoint called');
     
@@ -21,7 +21,7 @@ router.get('/conversations', async (req, res, next) => {
 });
 
 // POST /api/v1/chat/message
-router.post('/message', async (req, res, next) => {
+router.post('/message', async(req, res, next) => {
   try {
     logger.info('Send chat message endpoint called');
     

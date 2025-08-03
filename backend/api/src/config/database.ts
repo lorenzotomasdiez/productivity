@@ -1,10 +1,15 @@
-import pkg from 'pg';
+import pkg, { Pool, PoolClient } from 'pg';
 import { config } from './index.js';
 import { logger } from './logger.js';
 
-const { Pool } = pkg;
+const { Pool: PgPool } = pkg;
 
-let pool = null;
+let pool: Pool | null = null;
+
+interface QueryResultInterface {
+  rows: any[];
+  rowCount: number | null;
+}
 
 export async function connectDatabase() {
   try {
@@ -12,7 +17,7 @@ export async function connectDatabase() {
       ? config.database.testUrl 
       : config.database.url;
 
-    pool = new Pool({
+    pool = new PgPool({
       connectionString: databaseUrl,
       min: config.database.pool.min,
       max: config.database.pool.max,
@@ -33,28 +38,29 @@ export async function connectDatabase() {
     });
 
     // Handle pool errors
-    pool.on('error', (err) => {
+    pool.on('error', (err: Error) => {
       logger.error('Unexpected database pool error', { error: err.message });
     });
 
     return pool;
   } catch (error) {
+    const err = error as Error;
     logger.error('Failed to connect to database', { 
-      error: error.message,
-      stack: error.stack 
+      error: err.message,
+      stack: err.stack, 
     });
     throw error;
   }
 }
 
-export function getDatabase() {
+export function getDatabase(): Pool {
   if (!pool) {
     throw new Error('Database not connected. Call connectDatabase() first.');
   }
   return pool;
 }
 
-export async function closeDatabase() {
+export async function closeDatabase(): Promise<void> {
   if (pool) {
     await pool.end();
     logger.info('Database connection closed');
@@ -63,7 +69,10 @@ export async function closeDatabase() {
 }
 
 // Transaction helper
-export async function withTransaction(callback) {
+export async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
+  if (!pool) {
+    throw new Error('Database not connected');
+  }
   const client = await pool.connect();
   
   try {
@@ -80,7 +89,11 @@ export async function withTransaction(callback) {
 }
 
 // Query helper with logging
-export async function query(text, params = []) {
+export async function query(text: string, params: any[] = []): Promise<QueryResultInterface> {
+  if (!pool) {
+    throw new Error('Database not connected');
+  }
+  
   const start = Date.now();
   
   try {
@@ -95,13 +108,14 @@ export async function query(text, params = []) {
     
     return result;
   } catch (error) {
+    const err = error as Error;
     const duration = Date.now() - start;
     
     logger.error('Database query failed', {
       query: text,
       params,
       duration,
-      error: error.message,
+      error: err.message,
     });
     
     throw error;

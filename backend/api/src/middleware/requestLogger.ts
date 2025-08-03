@@ -1,6 +1,7 @@
+import { Request, Response, NextFunction } from 'express';
 import { logger } from '../config/logger.js';
 
-export function requestLogger(req, res, next) {
+export function requestLogger(req: Request, res: Response, next: NextFunction): void {
   const start = Date.now();
 
   // Generate unique request ID

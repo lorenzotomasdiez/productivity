@@ -4,7 +4,7 @@ import { logger } from '../config/logger.js';
 const router = express.Router();
 
 // GET /api/v1/notifications
-router.get('/', async (req, res, next) => {
+router.get('/', async(req, res, next) => {
   try {
     logger.info('Get notifications endpoint called');
     
@@ -21,7 +21,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // POST /api/v1/notifications/mark-read
-router.post('/mark-read', async (req, res, next) => {
+router.post('/mark-read', async(req, res, next) => {
   try {
     logger.info('Mark notifications as read endpoint called');
     

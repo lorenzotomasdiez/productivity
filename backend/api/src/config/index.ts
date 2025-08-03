@@ -8,7 +8,7 @@ dotenv.config();
 const requiredEnvVars = [
   'DATABASE_URL',
   'JWT_SECRET',
-  'JWT_REFRESH_SECRET'
+  'JWT_REFRESH_SECRET',
 ];
 
 for (const envVar of requiredEnvVars) {
@@ -18,18 +18,32 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
+// Helper function to parse integer with fallback
+const parseIntOrDefault = (value: string | undefined, defaultValue: number): number => {
+  return value ? parseInt(value, 10) : defaultValue;
+};
+
+// Helper function to get required env var
+const getRequiredEnv = (key: string): string => {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return value;
+};
+
 export const config = {
   env: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT) || 3000,
+  port: parseIntOrDefault(process.env.PORT, 3000),
   
   // Database configuration
   database: {
-    url: process.env.DATABASE_URL,
+    url: getRequiredEnv('DATABASE_URL'),
     testUrl: process.env.TEST_DATABASE_URL,
     pool: {
-      min: parseInt(process.env.DB_POOL_MIN) || 2,
-      max: parseInt(process.env.DB_POOL_MAX) || 20,
-      idle: parseInt(process.env.DB_POOL_IDLE) || 10000,
+      min: parseIntOrDefault(process.env.DB_POOL_MIN, 2),
+      max: parseIntOrDefault(process.env.DB_POOL_MAX, 20),
+      idle: parseIntOrDefault(process.env.DB_POOL_IDLE, 10000),
     },
   },
 
@@ -40,8 +54,8 @@ export const config = {
 
   // JWT configuration
   jwt: {
-    secret: process.env.JWT_SECRET,
-    refreshSecret: process.env.JWT_REFRESH_SECRET,
+    secret: getRequiredEnv('JWT_SECRET'),
+    refreshSecret: getRequiredEnv('JWT_REFRESH_SECRET'),
     expiry: process.env.JWT_EXPIRY || '15m',
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '30d',
   },
@@ -68,8 +82,8 @@ export const config = {
 
   // Rate limiting configuration
   rateLimit: {
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+    windowMs: parseIntOrDefault(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000), // 15 minutes
+    maxRequests: parseIntOrDefault(process.env.RATE_LIMIT_MAX_REQUESTS, 100),
   },
 
   // CORS configuration
@@ -85,18 +99,18 @@ export const config = {
 
   // File upload configuration
   upload: {
-    maxFileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB
+    maxFileSize: parseIntOrDefault(process.env.MAX_FILE_SIZE, 10 * 1024 * 1024), // 10MB
     uploadDir: process.env.UPLOAD_DIR || 'uploads',
   },
 
   // WebSocket configuration
   websocket: {
-    port: parseInt(process.env.WS_PORT) || 3002,
+    port: parseIntOrDefault(process.env.WS_PORT, 3002),
   },
 
   // Monitoring configuration
   monitoring: {
-    prometheusPort: parseInt(process.env.PROMETHEUS_PORT) || 9090,
-    healthCheckInterval: parseInt(process.env.HEALTH_CHECK_INTERVAL) || 30000,
+    prometheusPort: parseIntOrDefault(process.env.PROMETHEUS_PORT, 9090),
+    healthCheckInterval: parseIntOrDefault(process.env.HEALTH_CHECK_INTERVAL, 30000),
   },
 };

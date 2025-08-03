@@ -9,7 +9,7 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { notFoundHandler } from './middleware/notFoundHandler.js';
 
 // Import routes
-import { authRouter } from './routes/auth.js';
+import authRouter from './routes/auth.js';
 import { lifeAreasRouter } from './routes/lifeAreas.js';
 import { goalsRouter } from './routes/goals.js';
 import { chatRouter } from './routes/chat.js';

@@ -18,7 +18,7 @@ const logFormat = winston.format.combine(
     }
     
     return logMessage;
-  })
+  }),
 );
 
 // Create logger instance
@@ -31,7 +31,7 @@ export const logger = winston.createLogger({
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
-        winston.format.simple()
+        winston.format.simple(),
       ),
     }),
   ],
@@ -45,7 +45,7 @@ if (config.env === 'production' && config.logging?.filePath) {
       maxsize: 5242880, // 5MB
       maxFiles: 5,
       tailable: true,
-    })
+    }),
   );
 }
 
@@ -58,12 +58,14 @@ if (config.env === 'production') {
       maxsize: 5242880, // 5MB
       maxFiles: 5,
       tailable: true,
-    })
+    }),
   );
 }
 
 // Create request logger middleware
-export const requestLogger = (req, res, next) => {
+import { Request, Response, NextFunction } from 'express';
+
+export const requestLogger = (req: Request, res: Response, next: NextFunction): void => {
   const start = Date.now();
 
   res.on('finish', () => {

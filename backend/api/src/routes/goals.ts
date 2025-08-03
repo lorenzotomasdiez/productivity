@@ -4,7 +4,7 @@ import { logger } from '../config/logger.js';
 const router = express.Router();
 
 // GET /api/v1/goals
-router.get('/', async (req, res, next) => {
+router.get('/', async(req, res, next) => {
   try {
     logger.info('Get goals endpoint called');
     
@@ -21,7 +21,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // POST /api/v1/goals
-router.post('/', async (req, res, next) => {
+router.post('/', async(req, res, next) => {
   try {
     logger.info('Create goal endpoint called');
     

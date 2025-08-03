@@ -1,6 +1,22 @@
+import { Request, Response, NextFunction } from 'express';
 import { logger } from '../config/logger.js';
 
-export function errorHandler(err, req, res, next) {
+// Extend Request interface to include id
+declare global {
+  namespace Express {
+    interface Request {
+      id?: string;
+    }
+  }
+}
+
+interface CustomError extends Error {
+  code?: string;
+  statusCode?: number;
+  details?: any;
+}
+
+export function errorHandler(err: CustomError, req: Request, res: Response, _next: NextFunction): void {
   // Log the error
   logger.error('Unhandled error', {
     error: err.message,
@@ -49,26 +65,26 @@ export function errorHandler(err, req, res, next) {
   // Database-specific errors
   if (err.code) {
     switch (err.code) {
-      case '23505': // unique_violation
-        statusCode = 409;
-        code = 'DUPLICATE_RESOURCE';
-        message = 'Resource already exists';
-        break;
-      case '23503': // foreign_key_violation
-        statusCode = 400;
-        code = 'INVALID_REFERENCE';
-        message = 'Invalid reference to related resource';
-        break;
-      case '23502': // not_null_violation
-        statusCode = 400;
-        code = 'MISSING_REQUIRED_FIELD';
-        message = 'Required field is missing';
-        break;
-      case '23514': // check_violation
-        statusCode = 400;
-        code = 'CONSTRAINT_VIOLATION';
-        message = 'Data constraint violation';
-        break;
+    case '23505': // unique_violation
+      statusCode = 409;
+      code = 'DUPLICATE_RESOURCE';
+      message = 'Resource already exists';
+      break;
+    case '23503': // foreign_key_violation
+      statusCode = 400;
+      code = 'INVALID_REFERENCE';
+      message = 'Invalid reference to related resource';
+      break;
+    case '23502': // not_null_violation
+      statusCode = 400;
+      code = 'MISSING_REQUIRED_FIELD';
+      message = 'Required field is missing';
+      break;
+    case '23514': // check_violation
+      statusCode = 400;
+      code = 'CONSTRAINT_VIOLATION';
+      message = 'Data constraint violation';
+      break;
     }
   }
 
@@ -111,7 +127,9 @@ export function errorHandler(err, req, res, next) {
 
 // Custom error classes
 export class ValidationError extends Error {
-  constructor(message, details = null) {
+  public details: any;
+  
+  constructor(message: string, details: any = null) {
     super(message);
     this.name = 'ValidationError';
     this.details = details;
@@ -119,35 +137,37 @@ export class ValidationError extends Error {
 }
 
 export class UnauthorizedError extends Error {
-  constructor(message = 'Unauthorized') {
+  constructor(message: string = 'Unauthorized') {
     super(message);
     this.name = 'UnauthorizedError';
   }
 }
 
 export class ForbiddenError extends Error {
-  constructor(message = 'Forbidden') {
+  constructor(message: string = 'Forbidden') {
     super(message);
     this.name = 'ForbiddenError';
   }
 }
 
 export class NotFoundError extends Error {
-  constructor(message = 'Not found') {
+  constructor(message: string = 'Not found') {
     super(message);
     this.name = 'NotFoundError';
   }
 }
 
 export class ConflictError extends Error {
-  constructor(message = 'Conflict') {
+  constructor(message: string = 'Conflict') {
     super(message);
     this.name = 'ConflictError';
   }
 }
 
 export class UnprocessableEntityError extends Error {
-  constructor(message, details = null) {
+  public details: any;
+  
+  constructor(message: string, details: any = null) {
     super(message);
     this.name = 'UnprocessableEntityError';
     this.details = details;

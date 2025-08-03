@@ -4,7 +4,7 @@ import { logger } from '../config/logger.js';
 const router = express.Router();
 
 // GET /api/v1/dashboard/stats
-router.get('/stats', async (req, res, next) => {
+router.get('/stats', async(req, res, next) => {
   try {
     logger.info('Get dashboard stats endpoint called');
     
@@ -21,7 +21,7 @@ router.get('/stats', async (req, res, next) => {
 });
 
 // POST /api/v1/dashboard/widgets
-router.post('/widgets', async (req, res, next) => {
+router.post('/widgets', async(req, res, next) => {
   try {
     logger.info('Update dashboard widgets endpoint called');
     
