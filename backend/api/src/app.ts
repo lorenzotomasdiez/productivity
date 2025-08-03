@@ -12,6 +12,7 @@ import { notFoundHandler } from './middleware/notFoundHandler.js';
 import authRouter from './routes/auth.js';
 import { lifeAreasRouter } from './routes/lifeAreas.js';
 import { goalsRouter } from './routes/goals.js';
+import progressRouter from './routes/progress.js';
 import { chatRouter } from './routes/chat.js';
 import { researchRouter } from './routes/research.js';
 import { dashboardRouter } from './routes/dashboard.js';
@@ -72,6 +73,7 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/life-areas', lifeAreasRouter);
 app.use('/api/v1/goals', goalsRouter);
+app.use('/api/v1', progressRouter);
 app.use('/api/v1/chat', chatRouter);
 app.use('/api/v1/research', researchRouter);
 app.use('/api/v1/dashboard', dashboardRouter);

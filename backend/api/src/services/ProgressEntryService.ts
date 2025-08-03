@@ -97,4 +97,28 @@ export class ProgressEntryService {
     
     return await ProgressEntryModel.delete(entryId);
   }
+
+  /**
+   * Get a single progress entry by ID
+   */
+  static async getProgressEntryById(entryId: string, userId: string): Promise<ProgressEntry> {
+    const progressEntry = await ProgressEntryModel.findById(entryId);
+    
+    if (!progressEntry) {
+      throw new Error('Progress entry not found');
+    }
+    
+    // Validate goal exists and belongs to user
+    const goal = await GoalModel.findById(progressEntry.goalId);
+    
+    if (!goal) {
+      throw new Error('Goal not found');
+    }
+    
+    if (goal.userId !== userId) {
+      throw new Error('Unauthorized to access this progress entry');
+    }
+    
+    return progressEntry;
+  }
 }
