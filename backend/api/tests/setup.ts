@@ -16,6 +16,12 @@ beforeAll(async() => {
   // Set test environment
   process.env.NODE_ENV = 'test';
   
+  // Set required environment variables for tests
+  process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/jarvis_test';
+  process.env.JWT_SECRET = 'test-jwt-secret';
+  process.env.JWT_REFRESH_SECRET = 'test-jwt-refresh-secret';
+  process.env.REDIS_URL = 'redis://localhost:6379';
+  
   try {
     // Connect to test database and Redis
     await connectDatabase();

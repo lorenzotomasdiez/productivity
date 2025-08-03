@@ -1,8 +1,8 @@
 // LifeArea HTTP Controller
 import { Request, Response } from 'express';
-import { LifeAreaService } from '../services/LifeAreaService.js';
-import { CreateLifeAreaRequest, UpdateLifeAreaRequest, LifeAreaType } from '../types/lifeAreas.js';
-import { logger } from '../config/logger.js';
+import { LifeAreaService } from '../services/LifeAreaService';
+import { CreateLifeAreaRequest, UpdateLifeAreaRequest, LifeAreaType } from '../types/lifeAreas';
+import { logger } from '../config/logger';
 
 export class LifeAreaController {
   static async getLifeAreas(req: Request, res: Response): Promise<void> {

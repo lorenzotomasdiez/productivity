@@ -11,10 +11,12 @@ const requiredEnvVars = [
   'JWT_REFRESH_SECRET',
 ];
 
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    logger.error(`❌ Missing required environment variable: ${envVar}`);
-    process.exit(1);
+if (process.env.NODE_ENV !== 'test') {
+  for (const envVar of requiredEnvVars) {
+    if (!process.env[envVar]) {
+      logger.error(`❌ Missing required environment variable: ${envVar}`);
+      process.exit(1);
+    }
   }
 }
 
@@ -26,10 +28,10 @@ const parseIntOrDefault = (value: string | undefined, defaultValue: number): num
 // Helper function to get required env var
 const getRequiredEnv = (key: string): string => {
   const value = process.env[key];
-  if (!value) {
+  if (!value && process.env.NODE_ENV !== 'test') {
     throw new Error(`Missing required environment variable: ${key}`);
   }
-  return value;
+  return value || `test-${key.toLowerCase()}`;
 };
 
 export const config = {

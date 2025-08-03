@@ -1,5 +1,5 @@
 import express from 'express';
-import { LifeAreaController } from '../controllers/LifeAreaController.js';
+import { LifeAreaController } from '../controllers/LifeAreaController';
 
 const router = express.Router();
 

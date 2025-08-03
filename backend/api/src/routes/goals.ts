@@ -1,40 +1,21 @@
 import express from 'express';
-import { logger } from '../config/logger.js';
+import { GoalController } from '../controllers/GoalController';
 
 const router = express.Router();
 
-// GET /api/v1/goals
-router.get('/', async(req, res, next) => {
-  try {
-    logger.info('Get goals endpoint called');
-    
-    res.status(501).json({
-      success: false,
-      error: {
-        code: 'NOT_IMPLEMENTED',
-        message: 'Goals endpoints not yet implemented - coming in TDD phase',
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+// GET /api/v1/goals - Get all goals for user with optional filters
+router.get('/', GoalController.getGoals);
 
-// POST /api/v1/goals
-router.post('/', async(req, res, next) => {
-  try {
-    logger.info('Create goal endpoint called');
-    
-    res.status(501).json({
-      success: false,
-      error: {
-        code: 'NOT_IMPLEMENTED',
-        message: 'Goals endpoints not yet implemented - coming in TDD phase',
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+// POST /api/v1/goals - Create a new goal
+router.post('/', GoalController.createGoal);
+
+// GET /api/v1/goals/:id - Get specific goal by ID
+router.get('/:id', GoalController.getGoalById);
+
+// PUT /api/v1/goals/:id/progress - Update goal progress
+router.put('/:id/progress', GoalController.updateGoalProgress);
+
+// DELETE /api/v1/goals/:id - Delete a goal
+router.delete('/:id', GoalController.deleteGoal);
 
 export { router as goalsRouter };

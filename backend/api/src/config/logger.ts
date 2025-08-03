@@ -1,5 +1,4 @@
 import winston from 'winston';
-import { config } from './index.js';
 
 // Custom log format
 const logFormat = winston.format.combine(
@@ -23,7 +22,7 @@ const logFormat = winston.format.combine(
 
 // Create logger instance
 export const logger = winston.createLogger({
-  level: config.logging?.level || 'info',
+  level: process.env.LOG_LEVEL || 'info',
   format: logFormat,
   defaultMeta: { service: 'jarvis-api' },
   transports: [
@@ -38,10 +37,10 @@ export const logger = winston.createLogger({
 });
 
 // Add file transport for production
-if (config.env === 'production' && config.logging?.filePath) {
+if (process.env.NODE_ENV === 'production' && process.env.LOG_FILE_PATH) {
   logger.add(
     new winston.transports.File({
-      filename: config.logging.filePath,
+      filename: process.env.LOG_FILE_PATH,
       maxsize: 5242880, // 5MB
       maxFiles: 5,
       tailable: true,
@@ -50,7 +49,7 @@ if (config.env === 'production' && config.logging?.filePath) {
 }
 
 // Add error file transport
-if (config.env === 'production') {
+if (process.env.NODE_ENV === 'production') {
   logger.add(
     new winston.transports.File({
       filename: 'logs/error.log',
