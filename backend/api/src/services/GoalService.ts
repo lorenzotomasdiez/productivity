@@ -44,32 +44,7 @@ export class GoalService {
     return goal;
   }
   
-  static async updateGoalProgress(goalId: string, userId: string, newProgress: number): Promise<Goal> {
-    // Find and validate goal
-    const goal = await GoalModel.findById(goalId);
-    
-    if (!goal) {
-      throw new Error('Goal not found');
-    }
-    
-    if (goal.userId !== userId) {
-      throw new Error('Unauthorized to update this goal');
-    }
-    
-    // Update progress
-    const updatedGoal = await GoalModel.updateProgress(goalId, newProgress);
-    
-    if (!updatedGoal) {
-      throw new Error('Failed to update goal progress');
-    }
-    
-    // Check if goal should be auto-completed
-    if (GoalModel.isCompleted(updatedGoal) && updatedGoal.status !== GoalStatus.COMPLETED) {
-      return await GoalModel.update(goalId, { status: GoalStatus.COMPLETED }) || updatedGoal;
-    }
-    
-    return updatedGoal;
-  }
+  // Deprecated: update goal progress directly; use progress entries instead
   
   static async deleteGoal(goalId: string, userId: string): Promise<boolean> {
     // Find and validate goal

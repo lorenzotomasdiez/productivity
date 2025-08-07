@@ -1,7 +1,11 @@
 import express from 'express';
 import { GoalController } from '../controllers/GoalController';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Protect all goal routes
+router.use(authenticateToken);
 
 // GET /api/v1/goals - Get all goals for user with optional filters
 router.get('/', GoalController.getGoals);

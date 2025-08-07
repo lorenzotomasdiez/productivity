@@ -1,7 +1,11 @@
 import express from 'express';
 import { LifeAreaController } from '../controllers/LifeAreaController';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Protect all life area routes
+router.use(authenticateToken);
 
 // GET /api/v1/life-areas
 router.get('/', LifeAreaController.getLifeAreas);

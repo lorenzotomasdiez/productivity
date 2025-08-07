@@ -19,10 +19,7 @@ export class ProgressEntryService {
     // Create the progress entry
     const progressEntry = await ProgressEntryModel.create(progressData);
     
-    // If the progress entry has a value, update the goal's current value
-    if (progressData.value !== undefined && progressData.value !== null) {
-      await GoalModel.update(progressData.goalId, { currentValue: progressData.value });
-    }
+    // Do not directly update goal current_value here; DB trigger maintains it
     
     return progressEntry;
   }
@@ -68,10 +65,7 @@ export class ProgressEntryService {
       throw new Error('Failed to update progress entry');
     }
     
-    // If the update includes a value, update the goal's current value
-    if (updates.value !== undefined && updates.value !== null) {
-      await GoalModel.update(progressEntry.goalId, { currentValue: updates.value });
-    }
+    // Do not directly update goal current_value here; DB trigger maintains it
     
     return updatedEntry;
   }

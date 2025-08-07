@@ -41,10 +41,20 @@ jest.mock('../../src/models/LifeArea', () => ({
 jest.mock('../../src/app', () => {
   const express = require('express');
   const mockApp = express();
+  const jwt = require('jsonwebtoken');
   
   // Add middleware to simulate authenticated user
   mockApp.use((req: any, res: any, next: any) => {
     req.user = { id: 'test-user-123', email: 'test@example.com' };
+    // Ensure Authorization header so real auth middleware passes
+    if (!req.headers.authorization) {
+      const token = jwt.sign(
+        { userId: 'test-user-123', email: 'test@example.com', sessionId: 'session_123' },
+        'test-secret',
+        { expiresIn: '15m' },
+      );
+      req.headers.authorization = `Bearer ${token}`;
+    }
     next();
   });
   
@@ -534,8 +544,8 @@ describe('Goals API Integration', () => {
     });
   });
 
-  describe('PUT /api/v1/goals/:id/progress', () => {
-    test('should update goal progress successfully', async() => {
+  describe('PUT /api/v1/goals/:id/progress (deprecated)', () => {
+    test('should return 410 (deprecated)', async() => {
       // Given
       const mockGoal = {
         id: 'goal_1',
@@ -574,16 +584,14 @@ describe('Goals API Integration', () => {
       const response = await request(app)
         .put('/api/v1/goals/goal_1/progress')
         .send(progressData)
-        .expect(200);
+        .expect(410);
 
       // Then
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.currentValue).toBe(7);
-      expect(mockGoalModel.findById).toHaveBeenCalledWith('goal_1');
-      expect(mockGoalModel.updateProgress).toHaveBeenCalledWith('goal_1', 7);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.code).toBe('GONE');
     });
 
-    test('should return 404 when goal not found for progress update', async() => {
+    test('returns 410 even when goal not found (deprecated)', async() => {
       // Given
       mockGoalModel.findById.mockResolvedValue(null);
 
@@ -595,14 +603,13 @@ describe('Goals API Integration', () => {
       const response = await request(app)
         .put('/api/v1/goals/nonexistent/progress')
         .send(progressData)
-        .expect(404);
+        .expect(410);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.error.code).toBe('NOT_FOUND');
-      expect(response.body.error.message).toContain('Goal not found');
+      expect(response.body.error.code).toBe('GONE');
     });
 
-    test('should return 403 when user does not own the goal', async() => {
+    test('returns 410 even when unauthorized (deprecated)', async() => {
       // Given
       const mockGoal = {
         id: 'goal_1',
@@ -633,11 +640,10 @@ describe('Goals API Integration', () => {
       const response = await request(app)
         .put('/api/v1/goals/goal_1/progress')
         .send(progressData)
-        .expect(403);
+        .expect(410);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.error.code).toBe('FORBIDDEN');
-      expect(response.body.error.message).toContain('Unauthorized to update this goal');
+      expect(response.body.error.code).toBe('GONE');
     });
   });
 

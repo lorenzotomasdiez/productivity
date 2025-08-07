@@ -1,7 +1,11 @@
 import express from 'express';
 import { logger } from '../config/logger.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Protect all research routes
+router.use(authenticateToken);
 
 // GET /api/v1/research/history
 router.get('/history', async(req, res, next) => {

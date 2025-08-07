@@ -62,28 +62,31 @@ export class AuthService {
   }
 
   static async refreshTokens(refreshToken: string): Promise<{ user: User; tokens: AuthTokens } | null> {
-    // Verify refresh token
     const tokenData = await this.verifyRefreshToken(refreshToken);
     if (!tokenData) {
       return null;
     }
 
-    // Check if session exists and is valid
-    const session = await UserSessionModel.findValidSession(refreshToken);
-    if (!session || session.id !== tokenData.sessionId) {
+    // O(1): Lookup session by primary key from token
+    const session = await UserSessionModel.findById(tokenData.sessionId);
+    if (!session) {
       return null;
     }
 
-    // Get user
+    // Single bcrypt compare
+    const isMatch = await bcrypt.compare(refreshToken, session.refreshTokenHash);
+    if (!isMatch) {
+      return null;
+    }
+
+    // Load user
     const user = await UserModel.findById(tokenData.userId);
     if (!user) {
       return null;
     }
 
-    // Generate new tokens
+    // Rotate session: delete old, create new with newly issued refresh token
     const tokens = this.generateTokens(user, session.id);
-
-    // Update session with new refresh token hash
     await UserSessionModel.deleteSession(session.id);
     await UserSessionModel.create(user.id, tokens.refreshToken, session.deviceId);
 

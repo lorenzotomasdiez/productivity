@@ -107,7 +107,7 @@ describe('ProgressEntryService', () => {
       expect(mockProgressEntryModel.create).not.toHaveBeenCalled();
     });
 
-    it('should update goal current value when progress entry has value', async() => {
+    it('should NOT directly write goal current value when progress entry has value (DB trigger updates)', async() => {
       const mockGoal = {
         id: 'goal-123',
         userId: 'user-123',
@@ -134,7 +134,6 @@ describe('ProgressEntryService', () => {
 
       mockGoalModel.findById.mockResolvedValue(mockGoal);
       mockProgressEntryModel.create.mockResolvedValue(mockProgressEntry);
-      mockGoalModel.update.mockResolvedValue({ ...mockGoal, currentValue: 15 });
 
       const progressData = {
         goalId: 'goal-123',
@@ -146,7 +145,7 @@ describe('ProgressEntryService', () => {
 
       const result = await ProgressEntryService.createProgressEntry(progressData);
 
-      expect(mockGoalModel.update).toHaveBeenCalledWith('goal-123', { currentValue: 15 });
+      expect(mockGoalModel.update).not.toHaveBeenCalled();
       expect(result).toEqual(mockProgressEntry);
     });
 

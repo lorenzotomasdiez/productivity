@@ -34,44 +34,66 @@ A comprehensive, AI-powered productivity platform that centralizes and optimizes
 - Docker Desktop
 - Xcode (for iOS/macOS development)
 
-### Development Setup
+### Fastest path (Makefile)
 
-1. **Clone and setup**:
+1. Clone and initialize env files:
    ```bash
    git clone <repository>
    cd productivity
-   chmod +x scripts/setup/dev-setup.sh
-   ./scripts/setup/dev-setup.sh
+   make setup
    ```
 
-2. **Start development environment**:
+2. Start API + PostgreSQL + Redis:
    ```bash
-   cd docker/development
-   docker-compose up -d
+   make docker-up
    ```
 
-3. **Verify setup**:
+3. Verify:
    - API: http://localhost:3000/health
    - Database: localhost:5432
    - Redis: localhost:6379
 
-### Manual Setup (Alternative)
+4. Useful during development:
+   ```bash
+   make docker-logs     # tail API logs
+   make docker-down     # stop stack
+   make help            # list all targets
+   ```
 
-1. **Backend API**:
+### Local API without full stack (Makefile)
+
+Run DB/Redis via Docker, API locally with Node:
+
+```bash
+# Start DB + Redis only
+make db-up
+
+# Install deps and run API (auto-reload)
+make api-install
+make api-dev
+
+# Health check
+make api-health
+```
+
+### Manual setup (no Makefile)
+
+1. Backend API
    ```bash
    cd backend/api
    npm install
    cp .env.example .env  # Update with your config
-   npm run dev
+   # Start the server entrypoint
+   npx ts-node --esm src/server.ts
    ```
 
-2. **Database**:
+2. Database/Cache
    ```bash
    cd docker/development
    docker-compose up -d db redis
    ```
 
-3. **Run tests**:
+3. Run tests
    ```bash
    cd backend/api
    npm test
@@ -102,6 +124,9 @@ The project follows strict Test-Driven Development (TDD):
 # Run all tests
 npm test
 
+# or via Makefile from repo root
+make api-test
+
 # Run specific test types
 npm run test:unit
 npm run test:integration
@@ -124,6 +149,14 @@ docker-compose up -d
 - PostgreSQL (port 5432)
 - Redis (port 6379)
 
+Makefile shortcuts from repo root:
+```bash
+make docker-up           # same as above
+make docker-up-full      # includes AI service + research engine
+make docker-up-admin     # admin tools
+make docker-down
+```
+
 ### Full Stack
 ```bash
 docker-compose --profile full up -d
@@ -143,6 +176,18 @@ docker-compose --profile admin up -d
 docker-compose --profile testing up -d
 ```
 - Includes separate test database (port 5433)
+
+## 🧰 Makefile
+
+Common targets from repo root:
+
+- **make setup**: create `.env` files from examples
+- **make docker-up/down**: start/stop API + DB + Redis
+- **make db-up**: start only Postgres + Redis
+- **make api-install**: install API dependencies
+- **make api-dev**: run API with autoreload
+- **make api-test**: run API tests
+- **make help**: list available targets
 
 ## 🔧 Configuration
 

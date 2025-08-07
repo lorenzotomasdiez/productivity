@@ -148,57 +148,11 @@ export class GoalController {
   }
 
   static async updateGoalProgress(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const userId = req.user?.id;
-      const { currentValue } = req.body;
-
-      if (!userId) {
-        res.status(401).json({ 
-          success: false, 
-          error: { code: 'UNAUTHORIZED', message: 'User not authenticated' }, 
-        });
-        return;
-      }
-
-      if (typeof currentValue !== 'number') {
-        res.status(400).json({
-          success: false,
-          error: { code: 'VALIDATION_ERROR', message: 'currentValue must be a number' },
-        });
-        return;
-      }
-
-      const updatedGoal = await GoalService.updateGoalProgress(id!, userId, currentValue);
-
-      res.status(200).json({
-        success: true,
-        data: updatedGoal,
-      });
-    } catch (error: any) {
-      logger.error('Error updating goal progress', { error, goalId: req.params.id, userId: req.user?.id });
-      
-      if (error.message.includes('not found')) {
-        res.status(404).json({
-          success: false,
-          error: { code: 'NOT_FOUND', message: error.message },
-        });
-        return;
-      }
-
-      if (error.message.includes('Unauthorized')) {
-        res.status(403).json({
-          success: false,
-          error: { code: 'FORBIDDEN', message: error.message },
-        });
-        return;
-      }
-
-      res.status(500).json({
-        success: false,
-        error: { code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update goal progress' },
-      });
-    }
+    // Deprecated: single source of truth is progress entries + DB trigger
+    res.status(410).json({
+      success: false,
+      error: { code: 'GONE', message: 'Deprecated. Create a progress entry instead.' },
+    });
   }
 
   static async deleteGoal(req: Request, res: Response): Promise<void> {

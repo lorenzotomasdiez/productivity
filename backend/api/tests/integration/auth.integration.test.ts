@@ -22,6 +22,7 @@ jest.mock('../../src/models/User.js', () => ({
   UserSessionModel: {
     create: jest.fn(),
     findValidSession: jest.fn(),
+    findById: jest.fn(),
     deleteSession: jest.fn(),
     deleteUserSessions: jest.fn(),
   },
@@ -147,10 +148,11 @@ describe('Authentication API Integration Tests', () => {
         { expiresIn: '30d' },
       );
 
-      UserSessionModel.findValidSession.mockResolvedValue(mockSession);
+      UserSessionModel.findById.mockResolvedValue(mockSession);
       UserModel.findById.mockResolvedValue(mockUser);
       UserSessionModel.deleteSession.mockResolvedValue(true);
       UserSessionModel.create.mockResolvedValue(mockSession);
+      jest.spyOn(require('bcryptjs'), 'compare').mockResolvedValue(true as any);
 
       const response = await request(app)
         .post('/api/v1/auth/refresh')

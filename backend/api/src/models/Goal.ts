@@ -129,10 +129,7 @@ export class GoalModel {
       values.push(updates.targetValue);
     }
 
-    if (updates.currentValue !== undefined) {
-      setClause.push(`current_value = $${valueIndex++}`);
-      values.push(updates.currentValue);
-    }
+    // Prevent direct writes to current_value; maintained by DB trigger from progress_entries
 
     if (updates.targetUnit !== undefined) {
       setClause.push(`target_unit = $${valueIndex++}`);
@@ -188,8 +185,9 @@ export class GoalModel {
     return this.mapRowToGoal(result.rows[0]);
   }
 
+  // Deprecated: Use progress entries to affect current_value
   static async updateProgress(goalId: string, newValue: number): Promise<Goal | null> {
-    return this.update(goalId, { currentValue: newValue });
+    return this.findById(goalId);
   }
 
   static async delete(id: string): Promise<boolean> {

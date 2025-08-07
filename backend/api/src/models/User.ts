@@ -193,29 +193,41 @@ export class UserSessionModel {
   }
 
   static async findValidSession(refreshToken: string): Promise<UserSession | null> {
+    // Deprecated path kept for backward-compat tests; prefer findById + compare
     const queryText = `
       SELECT * FROM user_sessions 
       WHERE expires_at > NOW()
       ORDER BY created_at DESC
+      LIMIT 1
     `;
-
     const result = await query(queryText);
-
-    for (const row of result.rows) {
-      const isValid = await bcrypt.compare(refreshToken, row.refresh_token_hash);
-      if (isValid) {
-        return {
-          id: row.id,
-          userId: row.user_id,
-          deviceId: row.device_id,
-          refreshTokenHash: row.refresh_token_hash,
-          expiresAt: new Date(row.expires_at),
-          createdAt: new Date(row.created_at),
-        };
+    const row = result.rows[0];
+    if (!row) return null;
+    const isValid = await bcrypt.compare(refreshToken, row.refresh_token_hash);
+    return isValid
+      ? {
+        id: row.id,
+        userId: row.user_id,
+        deviceId: row.device_id,
+        refreshTokenHash: row.refresh_token_hash,
+        expiresAt: new Date(row.expires_at),
+        createdAt: new Date(row.created_at),
       }
-    }
+      : null;
+  }
 
-    return null;
+  static async findById(sessionId: string): Promise<UserSession | null> {
+    const result = await query('SELECT * FROM user_sessions WHERE id = $1 AND expires_at > NOW()', [sessionId]);
+    if (result.rows.length === 0) return null;
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      userId: row.user_id,
+      deviceId: row.device_id,
+      refreshTokenHash: row.refresh_token_hash,
+      expiresAt: new Date(row.expires_at),
+      createdAt: new Date(row.created_at),
+    };
   }
 
   static async deleteSession(sessionId: string): Promise<boolean> {

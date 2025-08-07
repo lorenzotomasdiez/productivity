@@ -1,7 +1,11 @@
 import express from 'express';
 import { logger } from '../config/logger.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Protect all chat routes
+router.use(authenticateToken);
 
 // GET /api/v1/chat/conversations
 router.get('/conversations', async(req, res, next) => {

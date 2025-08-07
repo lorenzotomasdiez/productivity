@@ -1,7 +1,11 @@
 import express from 'express';
 import { logger } from '../config/logger.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Protect all integrations routes
+router.use(authenticateToken);
 
 // GET /api/v1/integrations
 router.get('/', async(req, res, next) => {

@@ -34,10 +34,19 @@ jest.mock('../../src/models/LifeArea.js', () => ({
 jest.mock('../../src/app.js', () => {
   const express = require('express');
   const mockApp = express();
+  const jwt = require('jsonwebtoken');
   
   // Add middleware to simulate authenticated user
   mockApp.use((req: any, res: any, next: any) => {
     req.user = { id: 'test-user-123', email: 'test@example.com' };
+    if (!req.headers.authorization) {
+      const token = jwt.sign(
+        { userId: 'test-user-123', email: 'test@example.com', sessionId: 'session_123' },
+        'test-secret',
+        { expiresIn: '15m' },
+      );
+      req.headers.authorization = `Bearer ${token}`;
+    }
     next();
   });
   

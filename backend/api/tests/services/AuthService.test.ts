@@ -22,6 +22,7 @@ jest.mock('../../src/models/User.js', () => ({
   UserSessionModel: {
     create: jest.fn(),
     findValidSession: jest.fn(),
+    findById: jest.fn(),
     deleteSession: jest.fn(),
     deleteUserSessions: jest.fn(),
   },
@@ -214,10 +215,11 @@ describe('AuthService - TDD', () => {
         userId: mockUser.id,
       });
 
-      UserSessionModel.findValidSession.mockResolvedValue(mockSession);
+      UserSessionModel.findById.mockResolvedValue(mockSession);
       UserModel.findById.mockResolvedValue(mockUser);
       UserSessionModel.deleteSession.mockResolvedValue(true);
       UserSessionModel.create.mockResolvedValue(mockSession);
+      jest.spyOn(require('bcryptjs'), 'compare').mockResolvedValue(true as any);
 
       const result = await AuthService.refreshTokens(refreshToken);
 
@@ -260,6 +262,8 @@ describe('AuthService - TDD', () => {
     test('should verify password', async() => {
       const password = 'test_password';
       const hash = await AuthService.hashPassword(password);
+      // Reset any spies from other tests that might have mocked compare
+      jest.restoreAllMocks();
 
       const isValid = await AuthService.verifyPassword(password, hash);
       const isInvalid = await AuthService.verifyPassword('wrong_password', hash);
