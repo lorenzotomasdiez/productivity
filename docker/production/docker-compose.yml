@@ -1,0 +1,70 @@
+version: "3.9"
+
+name: jarvis-prod
+
+services:
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - api
+    networks:
+      - web
+      - internal
+
+  api:
+    image: ghcr.io/OWNER/jarvis-api:latest
+    restart: unless-stopped
+    env_file: ../../.env.production
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - api_uploads:/data/uploads
+    depends_on:
+      - db
+      - redis
+    networks:
+      - internal
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=jarvis_prod
+      - POSTGRES_USER=jarvis
+      - POSTGRES_PASSWORD=STRONG_PASSWORD
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../../database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
+  api_uploads:
+
+networks:
+  web:
+  internal:
+
+
