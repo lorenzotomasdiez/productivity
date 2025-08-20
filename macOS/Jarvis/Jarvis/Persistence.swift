@@ -15,8 +15,6 @@ struct PersistenceController {
         let result = PersistenceController(inMemory: true)
         let viewContext = result.container.viewContext
         
-        // TODO: Uncomment when Core Data entities are properly generated
-        /*
         // Create sample LifeArea
         let healthArea = LifeArea(context: viewContext)
         healthArea.id = UUID()
@@ -55,7 +53,6 @@ struct PersistenceController {
             let nsError = error as NSError
             fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
         }
-        */
         
         return result
     }()
