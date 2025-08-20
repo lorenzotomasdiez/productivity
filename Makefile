@@ -15,6 +15,9 @@ help: ## Show this help
 .PHONY: setup setup-api-env setup-docker-env
 setup: setup-api-env setup-docker-env ## One-time project setup (env files)
 
+validate-env: ## Validate environment variable consistency across all .env files
+	@./scripts/validate-env.sh
+
 setup-api-env: ## Create backend/api/.env from example if missing
 	@test -f $(API_DIR)/.env || cp $(API_DIR)/.env.example $(API_DIR)/.env
 

@@ -1,5 +1,6 @@
 // Life Areas API Integration Tests
 import request from 'supertest';
+import express from 'express';
 import { LifeAreaType } from '../../src/types/lifeAreas.js';
 
 // Mock config first
@@ -30,41 +31,38 @@ jest.mock('../../src/models/LifeArea.js', () => ({
   },
 }));
 
-// Mock request to have authenticated user
-jest.mock('../../src/app.js', () => {
-  const express = require('express');
-  const mockApp = express();
-  const jwt = require('jsonwebtoken');
+// Create test app with life areas routes
+const createTestApp = (): express.Application => {
+  const app = express();
+  app.use(express.json());
   
-  // Add middleware to simulate authenticated user
-  mockApp.use((req: any, res: any, next: any) => {
-    req.user = { id: 'test-user-123', email: 'test@example.com' };
-    if (!req.headers.authorization) {
-      const token = jwt.sign(
-        { userId: 'test-user-123', email: 'test@example.com', sessionId: 'session_123' },
-        'test-secret',
-        { expiresIn: '15m' },
-      );
-      req.headers.authorization = `Bearer ${token}`;
-    }
-    next();
-  });
-  
-  mockApp.use(express.json());
-  
-  // Import and use routes after setting up middleware
+  // Import and use life areas routes
   const { lifeAreasRouter } = require('../../src/routes/lifeAreas.js');
-  mockApp.use('/api/v1/life-areas', lifeAreasRouter);
+  app.use('/api/v1/life-areas', lifeAreasRouter);
   
-  return { app: mockApp };
-});
+  // Import our actual error handler
+  const { errorHandler } = require('../../src/middleware/errorHandler.js');
+  app.use(errorHandler);
+
+  return app;
+};
 
 import { LifeAreaModel } from '../../src/models/LifeArea.js';
 
 const mockLifeAreaModel = LifeAreaModel as jest.Mocked<typeof LifeAreaModel>;
 
-// Import the mocked app
-const { app } = require('../../src/app.js');
+// Create the test app
+const app = createTestApp();
+
+// Helper function to create JWT tokens for testing
+const createTestToken = (userId: string = 'test-user-123') => {
+  const jwt = require('jsonwebtoken');
+  return jwt.sign(
+    { userId, email: 'test@example.com', sessionId: 'session_123' },
+    'test-secret',
+    { expiresIn: '15m' }
+  );
+};
 
 describe('Life Areas API Integration', () => {
   beforeEach(() => {
@@ -76,7 +74,7 @@ describe('Life Areas API Integration', () => {
       // Given
       const mockLifeAreas = [
         {
-          id: 'area_1',
+          id: '550e8400-e29b-41d4-a716-446655440020',
           userId: 'test-user-123',
           name: 'Health',
           type: LifeAreaType.HEALTH,
@@ -86,7 +84,7 @@ describe('Life Areas API Integration', () => {
           updatedAt: new Date(),
         },
         {
-          id: 'area_2',
+          id: '550e8400-e29b-41d4-a716-446655440021',
           userId: 'test-user-123',
           name: 'Finance',
           type: LifeAreaType.FINANCE,
@@ -102,6 +100,7 @@ describe('Life Areas API Integration', () => {
       // When
       const response = await request(app)
         .get('/api/v1/life-areas')
+        .set('Authorization', `Bearer ${createTestToken()}`)
         .expect(200);
 
       // Then
@@ -116,7 +115,7 @@ describe('Life Areas API Integration', () => {
       // Given
       const mockActiveAreas = [
         {
-          id: 'area_1',
+          id: '550e8400-e29b-41d4-a716-446655440022',
           userId: 'test-user-123',
           name: 'Health',
           type: LifeAreaType.HEALTH,
@@ -131,12 +130,14 @@ describe('Life Areas API Integration', () => {
 
       // When
       const response = await request(app)
-        .get('/api/v1/life-areas?is_active=true')
+        .get('/api/v1/life-areas?isActive=true')
+        .set('Authorization', `Bearer ${createTestToken()}`)
         .expect(200);
 
       // Then
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveLength(1);
+      // The controller should parse the query parameter and pass the correct filter
       expect(mockLifeAreaModel.findByUserId).toHaveBeenCalledWith('test-user-123', { isActive: true });
     });
   });
@@ -153,7 +154,7 @@ describe('Life Areas API Integration', () => {
       };
 
       const mockCreatedArea = {
-        id: 'area_new',
+        id: '550e8400-e29b-41d4-a716-446655440023',
         userId: 'test-user-123',
         ...newLifeAreaData,
         isActive: true,
@@ -168,6 +169,7 @@ describe('Life Areas API Integration', () => {
       // When
       const response = await request(app)
         .post('/api/v1/life-areas')
+        .set('Authorization', `Bearer ${createTestToken()}`)
         .send(newLifeAreaData)
         .expect(201);
 
@@ -188,13 +190,15 @@ describe('Life Areas API Integration', () => {
       // When
       const response = await request(app)
         .post('/api/v1/life-areas')
+        .set('Authorization', `Bearer ${createTestToken()}`)
         .send(invalidData)
-        .expect(400);
+        .expect(422);
 
       // Then
       expect(response.body.success).toBe(false);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
-      expect(response.body.error.message).toBe('Name and type are required');
+      // The validation middleware catches this before it reaches our controller
+      expect(response.body.error.message).toBe('Request validation failed');
     });
 
     test('should return 409 for duplicate names', async() => {
@@ -206,7 +210,7 @@ describe('Life Areas API Integration', () => {
 
       mockLifeAreaModel.findByUserId.mockResolvedValue([
         {
-          id: 'existing',
+          id: '550e8400-e29b-41d4-a716-446655440024',
           userId: 'test-user-123',
           name: 'health', // Same name, different case
           type: LifeAreaType.HEALTH,
@@ -220,6 +224,7 @@ describe('Life Areas API Integration', () => {
       // When
       const response = await request(app)
         .post('/api/v1/life-areas')
+        .set('Authorization', `Bearer ${createTestToken()}`)
         .send(duplicateData)
         .expect(409);
 
@@ -233,7 +238,7 @@ describe('Life Areas API Integration', () => {
     test('should return specific life area', async() => {
       // Given
       const mockLifeArea = {
-        id: 'area_123',
+        id: '550e8400-e29b-41d4-a716-446655440025',
         userId: 'test-user-123',
         name: 'Health & Fitness',
         type: LifeAreaType.HEALTH,
@@ -248,12 +253,13 @@ describe('Life Areas API Integration', () => {
 
       // When
       const response = await request(app)
-        .get('/api/v1/life-areas/area_123')
+        .get('/api/v1/life-areas/550e8400-e29b-41d4-a716-446655440025')
+        .set('Authorization', `Bearer ${createTestToken()}`)
         .expect(200);
 
       // Then
       expect(response.body.success).toBe(true);
-      expect(response.body.data.id).toBe('area_123');
+      expect(response.body.data.id).toBe('550e8400-e29b-41d4-a716-446655440025');
       expect(response.body.data.name).toBe('Health & Fitness');
     });
 
@@ -263,7 +269,8 @@ describe('Life Areas API Integration', () => {
 
       // When
       const response = await request(app)
-        .get('/api/v1/life-areas/nonexistent')
+        .get('/api/v1/life-areas/550e8400-e29b-41d4-a716-446655440026')
+        .set('Authorization', `Bearer ${createTestToken()}`)
         .expect(404);
 
       // Then
@@ -276,7 +283,7 @@ describe('Life Areas API Integration', () => {
     test('should update life area successfully', async() => {
       // Given
       const existingArea = {
-        id: 'area_123',
+        id: '550e8400-e29b-41d4-a716-446655440027',
         userId: 'test-user-123',
         name: 'Original Name',
         type: LifeAreaType.HEALTH,
@@ -298,19 +305,19 @@ describe('Life Areas API Integration', () => {
       };
 
       mockLifeAreaModel.findById.mockResolvedValue(existingArea);
-      mockLifeAreaModel.findByUserId.mockResolvedValue([existingArea]);
       mockLifeAreaModel.update.mockResolvedValue(updatedArea);
 
       // When
       const response = await request(app)
-        .put('/api/v1/life-areas/area_123')
+        .put('/api/v1/life-areas/550e8400-e29b-41d4-a716-446655440027')
+        .set('Authorization', `Bearer ${createTestToken()}`)
         .send(updateData)
         .expect(200);
 
       // Then
       expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe('Updated Name');
-      expect(mockLifeAreaModel.update).toHaveBeenCalledWith('area_123', updateData);
+      expect(mockLifeAreaModel.update).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440027', updateData);
     });
   });
 
@@ -318,7 +325,7 @@ describe('Life Areas API Integration', () => {
     test('should delete life area successfully', async() => {
       // Given
       const existingArea = {
-        id: 'area_123',
+        id: '550e8400-e29b-41d4-a716-446655440028',
         userId: 'test-user-123',
         name: 'To Delete',
         type: LifeAreaType.CUSTOM,
@@ -333,13 +340,14 @@ describe('Life Areas API Integration', () => {
 
       // When
       const response = await request(app)
-        .delete('/api/v1/life-areas/area_123')
+        .delete('/api/v1/life-areas/550e8400-e29b-41d4-a716-446655440028')
+        .set('Authorization', `Bearer ${createTestToken()}`)
         .expect(200);
 
       // Then
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Life area deleted successfully');
-      expect(mockLifeAreaModel.delete).toHaveBeenCalledWith('area_123');
+      expect(mockLifeAreaModel.delete).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440028');
     });
   });
 });

@@ -18,8 +18,10 @@ export class GoalController {
 
       // Parse query filters
       const filters: any = {};
-      if (req.query.life_area_id) {
-        filters.lifeAreaId = req.query.life_area_id as string;
+      
+      // Handle both snake_case and camelCase parameter names
+      if (req.query.lifeAreaId || req.query.life_area_id) {
+        filters.lifeAreaId = (req.query.lifeAreaId || req.query.life_area_id) as string;
       }
       if (req.query.status && Object.values(GoalStatus).includes(req.query.status as GoalStatus)) {
         filters.status = req.query.status as GoalStatus;
@@ -27,11 +29,13 @@ export class GoalController {
       if (req.query.goalType && Object.values(GoalType).includes(req.query.goalType as GoalType)) {
         filters.goalType = req.query.goalType as GoalType;
       }
-      if (req.query.parent_goal_id !== undefined) {
-        filters.parentGoalId = req.query.parent_goal_id === 'null' ? null : req.query.parent_goal_id as string;
+      if (req.query.parentGoalId !== undefined || req.query.parent_goal_id !== undefined) {
+        const parentGoalId = req.query.parentGoalId || req.query.parent_goal_id;
+        filters.parentGoalId = parentGoalId === 'null' ? null : parentGoalId as string;
       }
-      if (req.query.has_deadline !== undefined) {
-        filters.hasDeadline = req.query.has_deadline === 'true';
+      if (req.query.hasDeadline !== undefined || req.query.has_deadline !== undefined) {
+        const hasDeadline = req.query.hasDeadline || req.query.has_deadline;
+        filters.hasDeadline = hasDeadline === 'true';
       }
 
       const goals = await GoalService.getUserGoals(userId, filters);
@@ -61,15 +65,6 @@ export class GoalController {
       }
 
       const goalData: CreateGoalRequest = req.body;
-
-      // Basic validation
-      if (!goalData.title || !goalData.lifeAreaId || !goalData.goalType) {
-        res.status(400).json({
-          success: false,
-          error: { code: 'VALIDATION_ERROR', message: 'Title, lifeAreaId, and goalType are required' },
-        });
-        return;
-      }
 
       const goal = await GoalService.createGoal(userId, goalData);
 

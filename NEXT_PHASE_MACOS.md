@@ -2,6 +2,30 @@
 
 Goal: Ship a functional macOS SwiftUI app connected to the API with offline-capable Core Data, focusing on Dashboard, Life Areas, Goals, and Progress. Optimize for daily desktop use.
 
+### Current Status Review (as of current session)
+
+#### ✅ What's Already Built:
+- **Basic SwiftUI App Structure** - Main app with NavigationSplitView
+- **UI Components** - Dashboard, Life Areas, Goals, Progress, Chat views (all placeholder/mock data)
+- **Testing Framework** - Using the new `Testing` framework (not XCTest) with basic UI component tests
+- **Core Data Setup** - Basic persistence controller with generic `Item` entity
+- **Project Structure** - Proper Xcode project with test targets
+
+#### ❌ What's Missing (The Good Shit):
+- **Real Data Models** - Only generic `Item` with timestamp, no proper entities
+- **API Integration** - No networking layer, no authentication
+- **Core Data Models** - No `LifeArea`, `Goal`, `ProgressEntry` entities
+- **Business Logic** - No view models, no real data flow
+- **Authentication** - No Apple Sign In, no token management
+- **Sync Manager** - No offline-first capabilities
+- **Proper TDD Structure** - Tests are basic UI tests, no business logic coverage
+
+#### 🔧 Current Architecture Issues:
+- Using `Testing` framework instead of standard XCTest (might cause issues)
+- `Persistence.swift` has placeholder `Item` entity instead of proper models
+- All views are static with hardcoded data
+- No proper MVVM structure or dependency injection
+
 ### Scope (MVP for macOS)
 - Authentication
   - Apple Sign In UI → obtain identity token
@@ -35,6 +59,34 @@ Goal: Ship a functional macOS SwiftUI app connected to the API with offline-capa
 - State management
   - MVVM with ObservableObject view models
   - Background tasks for sync using `Task` and `@MainActor` updates
+
+### TDD Implementation Plan
+
+#### Phase 1: Foundation & Core Data (Week 1)
+1. **Fix Testing Framework** - Convert to standard XCTest for better Xcode integration
+2. **Core Data Models** - Create proper entities: `LifeArea`, `Goal`, `ProgressEntry`
+3. **Model Tests** - Test entity creation, validation, relationships
+4. **Persistence Tests** - Test CRUD operations, error handling
+
+#### Phase 2: Business Logic & View Models (Week 1-2)
+5. **View Models** - Create ObservableObject classes for each feature
+6. **Business Logic Tests** - Test goal creation, progress tracking, life area management
+7. **Data Validation** - Test input validation, business rules
+
+#### Phase 3: API Integration (Week 2)
+8. **API Client** - Create networking layer with async/await
+9. **Authentication** - Implement Apple Sign In + token management
+10. **API Tests** - Test endpoints, error handling, token refresh
+
+#### Phase 4: Sync & Offline (Week 3)
+11. **Sync Manager** - Implement offline-first with API sync
+12. **Conflict Resolution** - Test sync conflicts and resolution
+13. **Performance Tests** - Test sync performance, memory usage
+
+#### Phase 5: UI Integration & Polish (Week 4)
+14. **UI Tests** - Test complete user flows
+15. **Error Handling** - Test error states, retry mechanisms
+16. **Performance & Accessibility** - Test app performance, VoiceOver support
 
 ### Implementation Steps
 1) Project setup
@@ -90,5 +142,20 @@ Goal: Ship a functional macOS SwiftUI app connected to the API with offline-capa
 - Week 2: Life Areas + Goals list/CRUD + sync
 - Week 3: Progress + Dashboard + polish
 - Week 4: Testing, stabilization, and beta
+
+### Next Immediate Steps
+1. **Fix the testing framework** - Convert to XCTest
+2. **Start with Core Data models** - Create proper entities
+3. **Write tests first** - Follow TDD red-green-refactor cycle
+4. **Build incrementally** - One feature at a time with full test coverage
+
+### TDD Workflow
+- **Red**: Write failing test first
+- **Green**: Implement minimal code to make test pass
+- **Refactor**: Clean up code while keeping tests green
+- **Repeat**: Move to next feature/requirement
+
+### Current App Status
+The current app is basically a beautiful shell with no guts. We need to build the fucking engine that makes this productivity app actually useful!
 
 

@@ -148,9 +148,7 @@ describe('ProgressController', () => {
 
   describe('POST /api/v1/goals/:goalId/progress', () => {
     it('should create a new progress entry successfully', async() => {
-      const progressData: CreateProgressEntryRequest = {
-        goalId: testGoal.id,
-        userId: testUser.id,
+      const progressData = {
         entryDate: '2025-08-03',
         value: 50,
         notes: 'Test progress entry',
@@ -184,10 +182,10 @@ describe('ProgressController', () => {
         .post(`/api/v1/goals/${testGoal.id}/progress`)
         .set('Authorization', `Bearer ${authToken}`)
         .send(invalidData)
-        .expect(400);
+        .expect(422);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.error.message).toContain('Entry date must be in YYYY-MM-DD format');
+      expect(response.body.error.message).toBe('Request validation failed');
     });
 
     it('should return 404 for non-existent goal', async() => {
@@ -195,9 +193,7 @@ describe('ProgressController', () => {
       const { ProgressEntryService } = require('../../src/services/ProgressEntryService');
       jest.spyOn(ProgressEntryService, 'createProgressEntry').mockRejectedValueOnce(new Error('Goal not found'));
 
-      const progressData: CreateProgressEntryRequest = {
-        goalId: 'non-existent-id',
-        userId: testUser.id,
+      const progressData = {
         entryDate: '2025-08-03',
         value: 50,
       };
@@ -217,9 +213,7 @@ describe('ProgressController', () => {
       const otherUser = createTestUser();
       const otherUserToken = generateTestToken(otherUser.id);
 
-      const progressData: CreateProgressEntryRequest = {
-        goalId: testGoal.id,
-        userId: otherUser.id,
+      const progressData = {
         entryDate: '2025-08-03',
         value: 50,
       };

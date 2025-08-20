@@ -113,7 +113,7 @@ describe('Authentication API Integration Tests', () => {
         .post('/api/v1/auth/apple-signin')
         .send(invalidData);
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
       expect(response.body.success).toBe(false);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
@@ -165,12 +165,12 @@ describe('Authentication API Integration Tests', () => {
       expect(response.body.data.tokens.refreshToken).toBeDefined();
     });
 
-    test('should return 400 for missing refresh token', async() => {
+    test('should return 422 for missing refresh token', async() => {
       const response = await request(app)
         .post('/api/v1/auth/refresh')
         .send({});
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
       expect(response.body.success).toBe(false);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });

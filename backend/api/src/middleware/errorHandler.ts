@@ -35,10 +35,10 @@ export function errorHandler(err: CustomError, req: Request, res: Response, _nex
 
   // Handle specific error types
   if (err.name === 'ValidationError') {
-    statusCode = 400;
+    statusCode = 422;
     code = 'VALIDATION_ERROR';
-    message = 'Invalid input data';
-    details = err.details || err.message;
+    message = err.message || 'Invalid input data';
+    details = err.details || null;
   } else if (err.name === 'UnauthorizedError' || err.message.includes('unauthorized')) {
     statusCode = 401;
     code = 'UNAUTHORIZED';

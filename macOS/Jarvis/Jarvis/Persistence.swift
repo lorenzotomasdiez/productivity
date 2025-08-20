@@ -14,18 +14,49 @@ struct PersistenceController {
     static let preview: PersistenceController = {
         let result = PersistenceController(inMemory: true)
         let viewContext = result.container.viewContext
-        for _ in 0..<10 {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-        }
+        
+        // TODO: Uncomment when Core Data entities are properly generated
+        /*
+        // Create sample LifeArea
+        let healthArea = LifeArea(context: viewContext)
+        healthArea.id = UUID()
+        healthArea.name = "Health & Fitness"
+        healthArea.icon = "heart.fill"
+        healthArea.colorHex = "#FF0000"
+        healthArea.areaDescription = "Physical and mental well-being"
+        healthArea.createdAt = Date()
+        healthArea.updatedAt = Date()
+        
+        // Create sample Goal
+        let exerciseGoal = Goal(context: viewContext)
+        exerciseGoal.id = UUID()
+        exerciseGoal.title = "Exercise 30 minutes daily"
+        exerciseGoal.goalDescription = "Build a consistent exercise habit"
+        exerciseGoal.goalType = "Habit"
+        exerciseGoal.targetValue = 30.0
+        exerciseGoal.targetUnit = "minutes"
+        exerciseGoal.createdAt = Date()
+        exerciseGoal.updatedAt = Date()
+        exerciseGoal.lifeArea = healthArea
+        
+        // Create sample ProgressEntry
+        let progressEntry = ProgressEntry(context: viewContext)
+        progressEntry.id = UUID()
+        progressEntry.value = 25.0
+        progressEntry.notes = "Felt great today, increased intensity"
+        progressEntry.date = Date()
+        progressEntry.createdAt = Date()
+        progressEntry.updatedAt = Date()
+        progressEntry.goal = exerciseGoal
+        
         do {
             try viewContext.save()
         } catch {
-            // Replace this implementation with code to handle the error appropriately.
-            // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
             let nsError = error as NSError
             fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
         }
+        */
+        
         return result
     }()
 

@@ -22,7 +22,9 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Helper function to parse integer with fallback
 const parseIntOrDefault = (value: string | undefined, defaultValue: number): number => {
-  return value ? parseInt(value, 10) : defaultValue;
+  if (!value) return defaultValue;
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? defaultValue : parsed;
 };
 
 // Helper function to get required env var

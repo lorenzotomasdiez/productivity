@@ -193,22 +193,86 @@ Common targets from repo root:
 
 ### Environment Variables
 
-Create `.env` files:
+The application uses three main environment configurations:
 
 1. **Backend API** (`backend/api/.env`):
-   ```env
-   DATABASE_URL=postgresql://user:pass@localhost:5432/jarvis_dev
-   REDIS_URL=redis://localhost:6379
-   JWT_SECRET=your-jwt-secret
-   OPENAI_API_KEY=your-openai-key
-   ANTHROPIC_API_KEY=your-anthropic-key
-   ```
+   - Copy from `backend/api/.env.example`
+   - Contains all application configuration variables
+   - Used for local development and testing
 
-2. **Docker** (`docker/development/.env`):
-   ```env
-   OPENAI_API_KEY=your-openai-key
-   ANTHROPIC_API_KEY=your-anthropic-key
-   ```
+2. **Docker Development** (`docker/development/.env`):
+   - Copy from `docker/development/.env.example`
+   - Mirrors API variables with Docker-specific defaults
+   - Used when running with Docker Compose
+
+3. **Production** (`.env.production`):
+   - Copy from `.env.production.example`
+   - Contains production-specific values
+   - Used for deployment
+
+#### Required Variables
+
+**Core Configuration:**
+- `NODE_ENV`: Environment (development/test/production)
+- `PORT`: API server port (default: 3000)
+
+**Database:**
+- `DATABASE_URL`: PostgreSQL connection string
+- `TEST_DATABASE_URL`: Test database connection string
+- `DB_POOL_MIN/MAX/IDLE`: Connection pool settings
+
+**Authentication:**
+- `JWT_SECRET`: Secret for JWT token signing
+- `JWT_REFRESH_SECRET`: Secret for refresh tokens
+- `JWT_EXPIRY`: Token expiration time
+- `JWT_REFRESH_EXPIRY`: Refresh token expiration
+
+**External Services:**
+- `REDIS_URL`: Redis connection string
+- `OPENAI_API_KEY`: OpenAI API key for AI features
+- `ANTHROPIC_API_KEY`: Anthropic API key for AI features
+
+**Apple Sign In:**
+- `APPLE_TEAM_ID`: Apple Developer Team ID
+- `APPLE_KEY_ID`: Apple Sign In key ID
+- `APPLE_PRIVATE_KEY_PATH`: Path to private key file
+- `APPLE_CLIENT_ID`: Apple app bundle identifier
+
+#### Optional Variables
+
+**Rate Limiting:**
+- `RATE_LIMIT_WINDOW_MS`: Rate limit window (default: 15min)
+- `RATE_LIMIT_MAX_REQUESTS`: Max requests per window (default: 100)
+
+**CORS:**
+- `CORS_ORIGIN`: Allowed origins (comma-separated)
+
+**Logging:**
+- `LOG_LEVEL`: Log level (default: info)
+
+**File Upload:**
+- `MAX_FILE_SIZE`: Max file size in bytes (default: 10MB)
+- `UPLOAD_DIR`: Upload directory path
+
+**Monitoring:**
+- `PROMETHEUS_PORT`: Prometheus metrics port
+- `HEALTH_CHECK_INTERVAL`: Health check frequency
+
+#### Quick Setup
+
+```bash
+# Backend API
+cp backend/api/.env.example backend/api/.env
+# Edit with your actual values
+
+# Docker Development
+cp docker/development/.env.example docker/development/.env
+# Edit with your actual values
+
+# Production (when deploying)
+cp .env.production.example .env.production
+# Edit with production values
+```
 
 ## 📱 iOS/macOS Development
 

@@ -18,8 +18,16 @@ export class LifeAreaController {
 
       // Parse query filters
       const filters: any = {};
-      if (req.query.is_active !== undefined) {
-        filters.isActive = req.query.is_active === 'true';
+      
+      // Handle both snake_case and camelCase parameter names
+      if (req.query.isActive !== undefined || req.query.is_active !== undefined) {
+        const isActive = req.query.isActive || req.query.is_active;
+        // Handle both string and boolean values
+        if (typeof isActive === 'boolean') {
+          filters.isActive = isActive;
+        } else {
+          filters.isActive = isActive === 'true';
+        }
       }
       if (req.query.type && Object.values(LifeAreaType).includes(req.query.type as LifeAreaType)) {
         filters.type = req.query.type as LifeAreaType;
@@ -52,15 +60,6 @@ export class LifeAreaController {
       }
 
       const lifeAreaData: CreateLifeAreaRequest = req.body;
-
-      // Validation
-      if (!lifeAreaData.name || !lifeAreaData.type) {
-        res.status(400).json({
-          success: false,
-          error: { code: 'VALIDATION_ERROR', message: 'Name and type are required' },
-        });
-        return;
-      }
 
       const lifeArea = await LifeAreaService.createLifeArea(userId, lifeAreaData);
 
@@ -259,14 +258,6 @@ export class LifeAreaController {
       }
 
       const { life_area_ids } = req.body;
-
-      if (!Array.isArray(life_area_ids)) {
-        res.status(400).json({
-          success: false,
-          error: { code: 'VALIDATION_ERROR', message: 'life_area_ids must be an array' },
-        });
-        return;
-      }
 
       const lifeAreas = await LifeAreaService.reorderLifeAreas(userId, life_area_ids);
 

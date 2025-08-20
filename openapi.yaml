@@ -27,9 +27,9 @@ info:
     url: https://opensource.org/licenses/MIT
 
 servers:
-  - url: https://api.jarvis-app.com/v1
+  - url: https://api.jarvis-app.com/api/v1
     description: Production server
-  - url: https://staging-api.jarvis-app.com/v1
+  - url: https://staging-api.jarvis-app.com/api/v1
     description: Staging server
   - url: http://localhost:3000/api/v1
     description: Local development server
@@ -38,6 +38,47 @@ security:
   - BearerAuth: []
 
 paths:
+  # =============================================
+  # HEALTH CHECK ENDPOINT
+  # =============================================
+  
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Check if the API is running and healthy
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: "healthy"
+                      timestamp:
+                        type: string
+                        format: date-time
+                        example: "2025-08-03T10:00:00Z"
+                      version:
+                        type: string
+                        example: "1.0.0"
+                      environment:
+                        type: string
+                        example: "development"
+                      uptime:
+                        type: number
+                        example: 1234.567
+
   # =============================================
   # AUTHENTICATION ENDPOINTS
   # =============================================
@@ -202,6 +243,39 @@ paths:
                           message:
                             type: string
                             example: "Successfully logged out"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout-all:
+    post:
+      tags: [Authentication]
+      summary: Logout all devices
+      description: Invalidate all sessions and refresh tokens for the user
+      responses:
+        '200':
+          description: All devices logged out successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: "Successfully logged out from all devices"
+                          devices_logged_out:
+                            type: integer
+                            example: 3
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -417,7 +491,7 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
   /life-areas/reorder:
-    put:
+    post:
       tags: [Life Areas]
       summary: Reorder life areas
       description: Update the sort order of life areas
@@ -761,9 +835,171 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /progress-entries/{id}:
     put:
       tags: [Goals]
+      summary: Update goal progress
+      description: Update progress for a specific goal
+      parameters:
+        - $ref: '#/components/parameters/GoalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                current_value:
+                  type: number
+                  description: New current value for the goal
+                  example: 7
+                notes:
+                  type: string
+                  maxLength: 1000
+                  description: Optional notes about the progress update
+                  example: "Made significant progress this week"
+                metadata:
+                  type: object
+                  description: Additional metadata about the progress
+                  example:
+                    source: "manual_entry"
+                    confidence: 0.9
+      responses:
+        '200':
+          description: Goal progress updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Goal'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # =============================================
+  # PROGRESS ENDPOINTS
+  # =============================================
+  
+  /goals/{goalId}/progress:
+    get:
+      tags: [Progress]
+      summary: Get goal progress entries
+      description: Retrieve progress entries for a specific goal with statistics
+      parameters:
+        - name: goalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Goal ID
+      responses:
+        '200':
+          description: Progress entries retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          goal:
+                            $ref: '#/components/schemas/Goal'
+                          progress_entries:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ProgressEntry'
+                          statistics:
+                            type: object
+                            properties:
+                              total_entries:
+                                type: integer
+                              average_value:
+                                type: number
+                              streak:
+                                type: integer
+                              completion_percentage:
+                                type: number
+                                minimum: 0
+                                maximum: 100
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Progress]
+      summary: Create progress entry
+      description: Create a new progress entry for a goal
+      parameters:
+        - name: goalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Goal ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProgressEntryRequest'
+      responses:
+        '201':
+          description: Progress entry created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProgressEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /progress-entries/{id}:
+    put:
+      tags: [Progress]
       summary: Update progress entry
       description: Update an existing progress entry
       parameters:
@@ -802,7 +1038,7 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
     delete:
-      tags: [Goals]
+      tags: [Progress]
       summary: Delete progress entry
       description: Delete a progress entry
       parameters:
@@ -817,7 +1053,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -835,41 +1071,27 @@ paths:
     get:
       tags: [AI Chat]
       summary: List chat conversations
-      description: Get user's chat conversations with Jarvis
-      parameters:
-        - $ref: '#/components/parameters/Pagination_Limit'
-        - $ref: '#/components/parameters/Pagination_Page'
-        - name: is_archived
-          in: query
-          schema:
-            type: boolean
-          description: Filter by archived status
+      description: Get user's chat conversations with Jarvis (NOT IMPLEMENTED)
       responses:
-        '200':
-          description: Conversations retrieved successfully
+        '501':
+          description: Not implemented yet
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: '#/components/schemas/ErrorResponse'
                   - type: object
                     properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/ChatConversation'
-                      meta:
-                        $ref: '#/components/schemas/PaginationMeta'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            example: "NOT_IMPLEMENTED"
+                          message:
+                            example: "Chat endpoints not yet implemented - coming in TDD phase"
 
     post:
       tags: [AI Chat]
@@ -1104,6 +1326,49 @@ paths:
                             example: "AI_SERVICE_UNAVAILABLE"
                           message:
                             example: "AI service is temporarily unavailable. Please try again later."
+
+  /chat/message:
+    post:
+      tags: [AI Chat]
+      summary: Send direct message to Jarvis
+      description: Send a direct message to Jarvis without creating a conversation (NOT IMPLEMENTED)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+                  example: "What's my current progress on my fitness goals?"
+                include_context:
+                  type: boolean
+                  default: true
+                  description: Whether to include user data context in AI response
+      responses:
+        '501':
+          description: Not implemented yet
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            example: "NOT_IMPLEMENTED"
+                          message:
+                            example: "Chat endpoints not yet implemented - coming in TDD phase"
 
   # =============================================
   # RESEARCH ENGINE ENDPOINTS
@@ -1416,9 +1681,186 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /research/history:
+    get:
+      tags: [Research Engine]
+      summary: Get research history
+      description: Get user's research execution history (NOT IMPLEMENTED)
+      responses:
+        '501':
+          description: Not implemented yet
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            example: "NOT_IMPLEMENTED"
+                          message:
+                            example: "Research endpoints not yet implemented - coming in TDD phase"
+
+  /research/query:
+    post:
+      tags: [Research Engine]
+      summary: Execute research query
+      description: Execute a one-time research query (NOT IMPLEMENTED)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query, target_life_areas]
+              properties:
+                query:
+                  type: string
+                  minLength: 10
+                  maxLength: 5000
+                  description: Research query to execute
+                  example: "Research the latest productivity techniques for remote work"
+                target_life_areas:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Life areas to focus research on
+                  minItems: 1
+                priority:
+                  type: string
+                  enum: [low, medium, high]
+                  default: medium
+                  description: Research priority level
+      responses:
+        '501':
+          description: Not implemented yet
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            example: "NOT_IMPLEMENTED"
+                          message:
+                            example: "Research endpoints not yet implemented - coming in TDD phase"
+
   # =============================================
   # DASHBOARD & ANALYTICS ENDPOINTS
   # =============================================
+
+  /dashboard/stats:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard statistics
+      description: Get dashboard statistics for the user
+      parameters:
+        - name: time_range
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+            default: week
+          description: Time range for analytics data
+      responses:
+        '200':
+          description: Dashboard statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DashboardData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /dashboard/widgets:
+    post:
+      tags: [Dashboard]
+      summary: Update dashboard widgets
+      description: Update dashboard widget configuration for the user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [widgets]
+              properties:
+                widgets:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, type, position]
+                    properties:
+                      id:
+                        type: string
+                        example: "widget1"
+                      type:
+                        type: string
+                        enum: [chart, metric, list, progress]
+                        example: "chart"
+                      position:
+                        type: object
+                        required: [x, y]
+                        properties:
+                          x:
+                            type: integer
+                            minimum: 0
+                            example: 0
+                          y:
+                            type: integer
+                            minimum: 0
+                            example: 0
+                      config:
+                        type: object
+                        example:
+                          chart_type: "line"
+                  minItems: 1
+      responses:
+        '200':
+          description: Dashboard widgets updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /dashboard:
     get:
@@ -1574,31 +2016,27 @@ paths:
     get:
       tags: [Integrations]
       summary: List available integrations
-      description: Get list of available and connected integrations
+      description: Get list of available and connected integrations (NOT IMPLEMENTED)
       responses:
-        '200':
-          description: Integrations retrieved successfully
+        '501':
+          description: Not implemented yet
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: '#/components/schemas/ErrorResponse'
                   - type: object
                     properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Integration'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            example: "NOT_IMPLEMENTED"
+                          message:
+                            example: "Integrations endpoints not yet implemented - coming in TDD phase"
 
   /integrations/{provider}:
     post:
@@ -1725,31 +2163,37 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  # =============================================
-  # NOTIFICATIONS ENDPOINTS
-  # =============================================
-
-  /notifications:
-    get:
-      tags: [Notifications]
-      summary: List user notifications
-      description: Get user's notifications with filtering
-      parameters:
-        - $ref: '#/components/parameters/Pagination_Limit'
-        - $ref: '#/components/parameters/Pagination_Page'
-        - name: is_read
-          in: query
-          schema:
-            type: boolean
-          description: Filter by read status
-        - name: notification_type
-          in: query
-          schema:
-            $ref: '#/components/schemas/NotificationType'
-          description: Filter by notification type
+  /integrations/connect:
+    post:
+      tags: [Integrations]
+      summary: Connect integration
+      description: Connect a third-party integration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, connection_data]
+              properties:
+                provider:
+                  $ref: '#/components/schemas/IntegrationProvider'
+                  description: Integration provider to connect
+                connection_data:
+                  type: object
+                  description: Provider-specific connection data
+                  example:
+                    api_key: "sk-1234567890abcdef"
+                    workspace_id: "workspace123"
+                sync_config:
+                  type: object
+                  description: Synchronization configuration
+                  example:
+                    sync_frequency: "daily"
+                    data_types: ["workouts", "weight", "sleep"]
       responses:
-        '200':
-          description: Notifications retrieved successfully
+        '201':
+          description: Integration connected successfully
           content:
             application/json:
               schema:
@@ -1758,21 +2202,51 @@ paths:
                   - type: object
                     properties:
                       data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Notification'
-                      meta:
-                        $ref: '#/components/schemas/PaginationMeta'
+                        $ref: '#/components/schemas/IntegrationConnection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
         '429':
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/InternalServerError'
+
+  # =============================================
+  # NOTIFICATIONS ENDPOINTS
+  # =============================================
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List user notifications
+      description: Get user's notifications with filtering (NOT IMPLEMENTED)
+      responses:
+        '501':
+          description: Not implemented yet
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            example: "NOT_IMPLEMENTED"
+                          message:
+                            example: "Notifications endpoints not yet implemented - coming in TDD phase"
 
   /notifications/{id}/read:
     put:
@@ -1822,6 +2296,55 @@ paths:
                           updated_count:
                             type: integer
                             description: Number of notifications updated
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /notifications/mark-read:
+    post:
+      tags: [Notifications]
+      summary: Mark notifications as read
+      description: Mark specific notifications as read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notification_ids]
+              properties:
+                notification_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Array of notification IDs to mark as read
+                  example: ["123e4567-e89b-12d3-a456-426614174000"]
+      responses:
+        '200':
+          description: Notifications marked as read successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          updated_count:
+                            type: integer
+                            description: Number of notifications updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

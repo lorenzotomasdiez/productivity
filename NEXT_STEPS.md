@@ -2,31 +2,6 @@
 
 Short, actionable items to complete before the next phase.
 
-### 1) ESM import consistency (runtime-sound)
-- Action:
-  - In `src/` ensure all internal imports use the `.js` extension (Node ESM requirement with TS transpile).
-  - Audit and fix mixed imports (e.g. `../middleware/auth` → `../middleware/auth.js`).
-- Acceptance:
-  - `npm run build && npm start` works without module resolution errors.
-  - Grep across `src/` finds no extensionless internal imports.
-
-### 2) Environment variables completeness
-- Action:
-  - Create `.env.example` with all required keys: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `REDIS_URL`, `CORS_ORIGIN`, `RATE_LIMIT_*`, `LOG_LEVEL`, etc.
-  - Add `docker/development/.env.example` mirroring the same variables.
-  - Update `README.md` with setup instructions and variable descriptions.
-- Acceptance:
-  - Fresh dev setup runs without missing-env errors.
-  - CI sanity job loads `.env.example` and passes config validation.
-
-### 3) Centralized request validation
-- Action:
-  - Introduce `joi`/`express-validator` middlewares per route. Extract validation out of controllers.
-  - Standardize invalid payload responses to 422 with field-level messages.
-- Acceptance:
-  - Controllers no longer contain ad-hoc validation branches.
-  - Integration tests assert 422 and detailed errors for invalid payloads.
-
 ### 4) OpenAPI parity and CI check
 - Action:
   - Update `openapi.yaml` to match current routes and auth requirements (most `/api/v1/*` require JWT).

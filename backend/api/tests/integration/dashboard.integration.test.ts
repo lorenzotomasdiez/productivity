@@ -1,16 +1,13 @@
 import request from 'supertest';
 import express from 'express';
 
-// Mock the auth middleware to always pass
-jest.mock('../../src/middleware/auth', () => ({
-  authenticateToken: (req: any, res: any, next: any) => {
-    req.user = {
-      id: 'test-user-123',
-      email: 'test@example.com',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    next();
+// Mock the config to use test JWT secret
+jest.mock('../../src/config/index.js', () => ({
+  config: {
+    jwt: {
+      secret: 'test-jwt-secret',
+      refreshSecret: 'test-jwt-refresh-secret',
+    },
   },
 }));
 
@@ -49,6 +46,16 @@ const createTestApp = (): express.Application => {
   return app;
 };
 
+// Helper function to create JWT tokens for testing
+const createTestToken = (userId: string = 'test-user-123') => {
+  const jwt = require('jsonwebtoken');
+  return jwt.sign(
+    { userId, email: 'test@example.com', sessionId: 'session_123' },
+    'test-jwt-secret', // Use the same secret as the mocked config
+    { expiresIn: '15m' }
+  );
+};
+
 describe('Dashboard API Integration Tests', () => {
   const app = createTestApp();
   
@@ -60,19 +67,19 @@ describe('Dashboard API Integration Tests', () => {
     test('should return 200 and dashboard statistics for authenticated user', async () => {
       // Mock data
       const mockLifeAreas = [
-        { id: 'la1', name: 'Health', type: 'health', isActive: true },
-        { id: 'la2', name: 'Finance', type: 'finance', isActive: true },
+        { id: '550e8400-e29b-41d4-a716-446655440030', name: 'Health', type: 'health', isActive: true },
+        { id: '550e8400-e29b-41d4-a716-446655440031', name: 'Finance', type: 'finance', isActive: true },
       ];
       
       const mockGoals = [
-        { id: 'g1', title: 'Exercise Daily', status: 'active', lifeAreaId: 'la1' },
-        { id: 'g2', title: 'Save Money', status: 'active', lifeAreaId: 'la2' },
-        { id: 'g3', title: 'Learn Guitar', status: 'completed', lifeAreaId: 'la1' },
+        { id: '550e8400-e29b-41d4-a716-446655440032', title: 'Exercise Daily', status: 'active', lifeAreaId: '550e8400-e29b-41d4-a716-446655440030' },
+        { id: '550e8400-e29b-41d4-a716-446655440033', title: 'Save Money', status: 'active', lifeAreaId: '550e8400-e29b-41d4-a716-446655440031' },
+        { id: '550e8400-e29b-41d4-a716-446655440034', title: 'Learn Guitar', status: 'completed', lifeAreaId: '550e8400-e29b-41d4-a716-446655440030' },
       ];
       
       const mockProgressEntries = [
-        { id: 'pe1', goalId: 'g1', entryDate: new Date(), value: 5 },
-        { id: 'pe2', goalId: 'g2', entryDate: new Date(), value: 100 },
+        { id: '550e8400-e29b-41d4-a716-446655440035', goalId: '550e8400-e29b-41d4-a716-446655440032', entryDate: new Date(), value: 5 },
+        { id: '550e8400-e29b-41d4-a716-446655440036', goalId: '550e8400-e29b-41d4-a716-446655440033', entryDate: new Date(), value: 100 },
       ];
 
       // Mock the models
@@ -85,7 +92,8 @@ describe('Dashboard API Integration Tests', () => {
       ProgressEntryModel.findByUserId.mockResolvedValue(mockProgressEntries);
 
       const response = await request(app)
-        .get('/api/v1/dashboard/stats');
+        .get('/api/v1/dashboard/stats')
+        .set('Authorization', `Bearer ${createTestToken()}`);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -112,7 +120,8 @@ describe('Dashboard API Integration Tests', () => {
       ProgressEntryModel.findByUserId.mockResolvedValue([]);
 
       const response = await request(app)
-        .get('/api/v1/dashboard/stats');
+        .get('/api/v1/dashboard/stats')
+        .set('Authorization', `Bearer ${createTestToken()}`);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -132,16 +141,17 @@ describe('Dashboard API Integration Tests', () => {
       twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
       const mockProgressEntries = [
-        { id: 'pe1', goalId: 'g1', entryDate: today, value: 5 },
-        { id: 'pe2', goalId: 'g1', entryDate: yesterday, value: 4 },
-        { id: 'pe3', goalId: 'g1', entryDate: twoDaysAgo, value: 3 },
+        { id: '550e8400-e29b-41d4-a716-446655440037', goalId: '550e8400-e29b-41d4-a716-446655440032', entryDate: today, value: 5 },
+        { id: '550e8400-e29b-41d4-a716-446655440038', goalId: '550e8400-e29b-41d4-a716-446655440032', entryDate: yesterday, value: 4 },
+        { id: '550e8400-e29b-41d4-a716-446655440039', goalId: '550e8400-e29b-41d4-a716-446655440032', entryDate: twoDaysAgo, value: 3 },
       ];
 
       const { ProgressEntryModel } = require('../../src/models/ProgressEntry.js');
       ProgressEntryModel.findByUserId.mockResolvedValue(mockProgressEntries);
 
       const response = await request(app)
-        .get('/api/v1/dashboard/stats');
+        .get('/api/v1/dashboard/stats')
+        .set('Authorization', `Bearer ${createTestToken()}`);
 
       expect(response.status).toBe(200);
       expect(response.body.data.summary.current_streak).toBe(3);
@@ -153,7 +163,8 @@ describe('Dashboard API Integration Tests', () => {
       LifeAreaModel.findByUserId.mockRejectedValue(new Error('Database connection failed'));
 
       const response = await request(app)
-        .get('/api/v1/dashboard/stats');
+        .get('/api/v1/dashboard/stats')
+        .set('Authorization', `Bearer ${createTestToken()}`);
 
       expect(response.status).toBe(500);
       expect(response.body.success).toBe(false);
@@ -165,13 +176,14 @@ describe('Dashboard API Integration Tests', () => {
     test('should return 200 and update user dashboard widgets', async () => {
       const widgetData = {
         widgets: [
-          { id: 'widget1', type: 'goals_summary', position: { x: 0, y: 0 } },
-          { id: 'widget2', type: 'progress_chart', position: { x: 1, y: 0 } },
+          { id: 'widget1', type: 'metric', position: { x: 0, y: 0 } },
+          { id: 'widget2', type: 'chart', position: { x: 1, y: 0 } },
         ],
       };
 
       const response = await request(app)
         .post('/api/v1/dashboard/widgets')
+        .set('Authorization', `Bearer ${createTestToken()}`)
         .send(widgetData);
 
       expect(response.status).toBe(200);
@@ -189,9 +201,10 @@ describe('Dashboard API Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/v1/dashboard/widgets')
+        .set('Authorization', `Bearer ${createTestToken()}`)
         .send(invalidWidgetData);
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(422);
       expect(response.body.success).toBe(false);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });

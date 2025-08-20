@@ -1,6 +1,8 @@
 import express from 'express';
 import { logger } from '../config/logger.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { validateRequest } from '../middleware/validation.js';
+import { additionalSchemas } from '../validation/schemas.js';
 
 const router = express.Router();
 
@@ -8,7 +10,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // GET /api/v1/chat/conversations
-router.get('/conversations', async(req, res, next) => {
+router.get('/conversations', validateRequest(additionalSchemas.chatConversations), async(req, res, next) => {
   try {
     logger.info('Get chat conversations endpoint called');
     
@@ -25,7 +27,7 @@ router.get('/conversations', async(req, res, next) => {
 });
 
 // POST /api/v1/chat/message
-router.post('/message', async(req, res, next) => {
+router.post('/message', validateRequest(additionalSchemas.chatMessage), async(req, res, next) => {
   try {
     logger.info('Send chat message endpoint called');
     

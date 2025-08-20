@@ -131,44 +131,6 @@ export class DashboardController {
 
       const { widgets } = req.body;
 
-      // Validate widget data structure
-      if (!Array.isArray(widgets)) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Widgets must be an array',
-          },
-        });
-        return;
-      }
-
-      // Validate each widget
-      for (const widget of widgets) {
-        if (!widget.id || !widget.type || !widget.position) {
-          res.status(400).json({
-            success: false,
-            error: {
-              code: 'VALIDATION_ERROR',
-              message: 'Each widget must have id, type, and position',
-            },
-          });
-          return;
-        }
-
-        if (widget.position.x === undefined || widget.position.x === null || 
-            widget.position.y === undefined || widget.position.y === null) {
-          res.status(400).json({
-            success: false,
-            error: {
-              code: 'VALIDATION_ERROR',
-              message: 'Widget position must have x and y coordinates',
-            },
-          });
-          return;
-        }
-      }
-
       // For MVP, we'll just return the widgets as-is
       // In a real implementation, this would save to the database
       res.status(200).json({

@@ -259,6 +259,281 @@ describe('Goal Model', () => {
     });
   });
 
+  describe('update', () => {
+    test('should update goal title successfully', async() => {
+      // Given
+      const goalId = 'goal_123';
+      const updates = { title: 'Updated Goal Title' };
+
+      const mockUpdatedGoal = {
+        id: goalId,
+        user_id: testUserId,
+        life_area_id: testLifeAreaId,
+        parent_goal_id: null,
+        title: updates.title,
+        description: 'Read 24 books this year',
+        goal_type: 'numeric',
+        target_value: 24,
+        current_value: 6,
+        target_unit: 'books',
+        deadline: null,
+        priority: 3,
+        status: 'active',
+        metadata: '{}',
+        reminder_config: '{}',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      mockQuery.mockResolvedValue({ rows: [mockUpdatedGoal], rowCount: 1 });
+
+      // When
+      const updatedGoal = await GoalModel.update(goalId, updates);
+
+      // Then
+      expect(updatedGoal).toBeDefined();
+      expect(updatedGoal?.title).toBe('Updated Goal Title');
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE goals'),
+        expect.arrayContaining([updates.title, expect.any(Date), goalId])
+      );
+    });
+
+    test('should update multiple fields successfully', async() => {
+      // Given
+      const goalId = 'goal_123';
+      const updates = {
+        title: 'Updated Title',
+        description: 'Updated description',
+        priority: 5,
+        deadline: '2025-06-30'
+      };
+
+      const mockUpdatedGoal = {
+        id: goalId,
+        user_id: testUserId,
+        life_area_id: testLifeAreaId,
+        parent_goal_id: null,
+        title: updates.title,
+        description: updates.description,
+        goal_type: 'numeric',
+        target_value: 24,
+        current_value: 6,
+        target_unit: 'books',
+        deadline: updates.deadline,
+        priority: updates.priority,
+        status: 'active',
+        metadata: '{}',
+        reminder_config: '{}',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      mockQuery.mockResolvedValue({ rows: [mockUpdatedGoal], rowCount: 1 });
+
+      // When
+      const updatedGoal = await GoalModel.update(goalId, updates);
+
+      // Then
+      expect(updatedGoal).toBeDefined();
+      expect(updatedGoal?.title).toBe('Updated Title');
+      expect(updatedGoal?.description).toBe('Updated description');
+      expect(updatedGoal?.priority).toBe(5);
+      expect(updatedGoal?.deadline).toEqual(new Date('2025-06-30'));
+    });
+
+    test('should throw error for empty title', async() => {
+      // Given
+      const goalId = 'goal_123';
+      const updates = { title: '   ' };
+
+      // When & Then
+      await expect(GoalModel.update(goalId, updates)).rejects.toThrow('Goal title cannot be empty');
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    test('should handle empty title with only whitespace', async() => {
+      // Given
+      const goalId = 'goal_123';
+      const updates = { title: '\t\n  \r' };
+
+      // When & Then
+      await expect(GoalModel.update(goalId, updates)).rejects.toThrow('Goal title cannot be empty');
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    test('should handle metadata updates', async() => {
+      // Given
+      const goalId = 'goal_123';
+      const metadata = { category: 'learning', difficulty: 'medium' };
+      const updates = { metadata };
+
+      const mockUpdatedGoal = {
+        id: goalId,
+        user_id: testUserId,
+        life_area_id: testLifeAreaId,
+        parent_goal_id: null,
+        title: 'Read Books',
+        description: 'Read 24 books this year',
+        goal_type: 'numeric',
+        target_value: 24,
+        current_value: 6,
+        target_unit: 'books',
+        deadline: null,
+        priority: 3,
+        status: 'active',
+        metadata: JSON.stringify(metadata),
+        reminder_config: '{}',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      mockQuery.mockResolvedValue({ rows: [mockUpdatedGoal], rowCount: 1 });
+
+      // When
+      const updatedGoal = await GoalModel.update(goalId, updates);
+
+      // Then
+      expect(updatedGoal).toBeDefined();
+      expect(updatedGoal?.metadata).toEqual(metadata);
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('metadata = $'),
+        expect.arrayContaining([JSON.stringify(metadata), expect.any(Date), goalId])
+      );
+    });
+
+    test('should handle reminder config updates', async() => {
+      // Given
+      const goalId = 'goal_123';
+      const reminderConfig = { frequency: 'daily', time: '09:00' };
+      const updates = { reminderConfig };
+
+      const mockUpdatedGoal = {
+        id: goalId,
+        user_id: testUserId,
+        life_area_id: testLifeAreaId,
+        parent_goal_id: null,
+        title: 'Read Books',
+        description: 'Read 24 books this year',
+        goal_type: 'numeric',
+        target_value: 24,
+        current_value: 6,
+        target_unit: 'books',
+        deadline: null,
+        priority: 3,
+        status: 'active',
+        metadata: '{}',
+        reminder_config: JSON.stringify(reminderConfig),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      mockQuery.mockResolvedValue({ rows: [mockUpdatedGoal], rowCount: 1 });
+
+      // When
+      const updatedGoal = await GoalModel.update(goalId, updates);
+
+      // Then
+      expect(updatedGoal).toBeDefined();
+      expect(updatedGoal?.reminderConfig).toEqual(reminderConfig);
+    });
+
+    test('should return existing goal when no updates provided', async() => {
+      // Given
+      const goalId = 'goal_123';
+      const updates = {};
+
+      const mockGoal = {
+        id: goalId,
+        user_id: testUserId,
+        life_area_id: testLifeAreaId,
+        parent_goal_id: null,
+        title: 'Read Books',
+        description: 'Read 24 books this year',
+        goal_type: 'numeric',
+        target_value: 24,
+        current_value: 6,
+        target_unit: 'books',
+        deadline: null,
+        priority: 3,
+        status: 'active',
+        metadata: '{}',
+        reminder_config: '{}',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      mockQuery.mockResolvedValue({ rows: [mockGoal], rowCount: 1 });
+
+      // When
+      const result = await GoalModel.update(goalId, updates);
+
+      // Then
+      expect(result).toBeDefined();
+      expect(mockQuery).toHaveBeenCalledWith(
+        'SELECT * FROM goals WHERE id = $1',
+        [goalId]
+      );
+    });
+
+    test('should handle empty string values correctly', async() => {
+      // Given
+      const goalId = 'goal_123';
+      const updates = {
+        description: '',
+        targetUnit: '',
+        deadline: '',
+        metadata: {},
+        reminderConfig: {}
+      };
+
+      const mockUpdatedGoal = {
+        id: goalId,
+        user_id: testUserId,
+        life_area_id: testLifeAreaId,
+        parent_goal_id: null,
+        title: 'Read Books',
+        description: '',
+        goal_type: 'numeric',
+        target_value: 24,
+        current_value: 6,
+        target_unit: '',
+        deadline: null,
+        priority: 3,
+        status: 'active',
+        metadata: '{}',
+        reminder_config: '{}',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      mockQuery.mockResolvedValue({ rows: [mockUpdatedGoal], rowCount: 1 });
+
+      // When
+      const updatedGoal = await GoalModel.update(goalId, updates);
+
+      // Then
+      expect(updatedGoal).toBeDefined();
+      expect(updatedGoal?.description).toBe('');
+      expect(updatedGoal?.targetUnit).toBe('');
+      expect(updatedGoal?.deadline).toBeNull();
+    });
+
+    test('should handle goal not found', async() => {
+      // Given
+      const goalId = 'goal_123';
+      const updates = { title: 'Updated Title' };
+
+      mockQuery.mockResolvedValue({ rows: [], rowCount: 0 });
+
+      // When
+      const result = await GoalModel.update(goalId, updates);
+
+      // Then
+      expect(result).toBeNull();
+    });
+  });
+
   describe('calculateProgressPercentage', () => {
     test('should calculate progress percentage for numeric goal', async() => {
       // Given
@@ -314,6 +589,146 @@ describe('Goal Model', () => {
 
       // Then
       expect(percentage).toBe(100);
+    });
+
+    test('should return 0% when target value is 0', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Read Books',
+        description: null,
+        goalType: GoalType.NUMERIC,
+        targetValue: 0,
+        currentValue: 5,
+        targetUnit: 'books',
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.ACTIVE,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const percentage = GoalModel.calculateProgressPercentage(goal);
+
+      // Then
+      expect(percentage).toBe(0);
+    });
+
+    test('should return 0% when target value is null', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Read Books',
+        description: null,
+        goalType: GoalType.NUMERIC,
+        targetValue: null,
+        currentValue: 5,
+        targetUnit: 'books',
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.ACTIVE,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const percentage = GoalModel.calculateProgressPercentage(goal);
+
+      // Then
+      expect(percentage).toBe(0);
+    });
+
+    test('should return 100% for completed goal regardless of target value', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Read Books',
+        description: null,
+        goalType: GoalType.NUMERIC,
+        targetValue: null,
+        currentValue: 0,
+        targetUnit: 'books',
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.COMPLETED,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const percentage = GoalModel.calculateProgressPercentage(goal);
+
+      // Then
+      expect(percentage).toBe(100);
+    });
+
+    test('should cap percentage at 100% when current value exceeds target', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Read Books',
+        description: null,
+        goalType: GoalType.NUMERIC,
+        targetValue: 24,
+        currentValue: 30,
+        targetUnit: 'books',
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.ACTIVE,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const percentage = GoalModel.calculateProgressPercentage(goal);
+
+      // Then
+      expect(percentage).toBe(100);
+    });
+
+    test('should round percentage correctly', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Read Books',
+        description: null,
+        goalType: GoalType.NUMERIC,
+        targetValue: 100,
+        currentValue: 33,
+        targetUnit: 'books',
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.ACTIVE,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const percentage = GoalModel.calculateProgressPercentage(goal);
+
+      // Then
+      expect(percentage).toBe(33); // 33/100 * 100 = 33%
     });
   });
 
@@ -372,6 +787,303 @@ describe('Goal Model', () => {
 
       // Then
       expect(isCompleted).toBe(false);
+    });
+
+    test('should detect completed numeric goal when current value exceeds target', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Read Books',
+        description: null,
+        goalType: GoalType.NUMERIC,
+        targetValue: 24,
+        currentValue: 30,
+        targetUnit: 'books',
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.ACTIVE,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const isCompleted = GoalModel.isCompleted(goal);
+
+      // Then
+      expect(isCompleted).toBe(true);
+    });
+
+    test('should detect incomplete numeric goal when target value is null', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Read Books',
+        description: null,
+        goalType: GoalType.NUMERIC,
+        targetValue: null,
+        currentValue: 15,
+        targetUnit: 'books',
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.ACTIVE,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const isCompleted = GoalModel.isCompleted(goal);
+
+      // Then
+      expect(isCompleted).toBe(false);
+    });
+
+    test('should detect completed binary goal', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Learn to Cook',
+        description: null,
+        goalType: GoalType.BINARY,
+        targetValue: null,
+        currentValue: 0,
+        targetUnit: null,
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.COMPLETED,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const isCompleted = GoalModel.isCompleted(goal);
+
+      // Then
+      expect(isCompleted).toBe(true);
+    });
+
+    test('should detect incomplete binary goal', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Learn to Cook',
+        description: null,
+        goalType: GoalType.BINARY,
+        targetValue: null,
+        currentValue: 0,
+        targetUnit: null,
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.ACTIVE,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const isCompleted = GoalModel.isCompleted(goal);
+
+      // Then
+      expect(isCompleted).toBe(false);
+    });
+
+    test('should detect completed milestone goal', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Complete Project Phase 1',
+        description: null,
+        goalType: GoalType.MILESTONE,
+        targetValue: null,
+        currentValue: 0,
+        targetUnit: null,
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.COMPLETED,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const isCompleted = GoalModel.isCompleted(goal);
+
+      // Then
+      expect(isCompleted).toBe(true);
+    });
+
+    test('should detect completed habit goal', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Daily Meditation',
+        description: null,
+        goalType: GoalType.HABIT,
+        targetValue: null,
+        currentValue: 0,
+        targetUnit: null,
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.COMPLETED,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const isCompleted = GoalModel.isCompleted(goal);
+
+      // Then
+      expect(isCompleted).toBe(true);
+    });
+
+    test('should handle unknown goal type by checking status', () => {
+      // Given
+      const goal = {
+        id: 'goal_123',
+        userId: testUserId,
+        lifeAreaId: testLifeAreaId,
+        title: 'Unknown Goal Type',
+        description: null,
+        goalType: 'UNKNOWN_TYPE' as GoalType,
+        targetValue: null,
+        currentValue: 0,
+        targetUnit: null,
+        deadline: null,
+        priority: 3,
+        status: GoalStatus.COMPLETED,
+        metadata: {},
+        reminderConfig: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // When
+      const isCompleted = GoalModel.isCompleted(goal);
+
+      // Then
+      expect(isCompleted).toBe(true);
+    });
+  });
+
+  describe('mapRowToGoal', () => {
+    test('should handle metadata with valid JSON', () => {
+      // Given
+      const row = {
+        id: 'goal_123',
+        user_id: testUserId,
+        life_area_id: testLifeAreaId,
+        parent_goal_id: null,
+        title: 'Test Goal',
+        description: 'Test Description',
+        goal_type: 'numeric',
+        target_value: '24',
+        current_value: '6',
+        target_unit: 'books',
+        deadline: '2025-12-31',
+        priority: '3',
+        status: 'active',
+        metadata: '{"category": "learning", "difficulty": "medium"}',
+        reminder_config: '{"frequency": "daily", "time": "09:00"}',
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+      };
+
+      // When
+      const goal = GoalModel['mapRowToGoal'](row);
+
+      // Then
+      expect(goal.metadata).toEqual({ category: 'learning', difficulty: 'medium' });
+      expect(goal.reminderConfig).toEqual({ frequency: 'daily', time: '09:00' });
+      expect(goal.targetValue).toBe(24);
+      expect(goal.currentValue).toBe(6);
+      expect(goal.priority).toBe(3);
+      expect(goal.deadline).toEqual(new Date('2025-12-31'));
+    });
+
+    test('should handle metadata with empty JSON', () => {
+      // Given
+      const row = {
+        id: 'goal_123',
+        user_id: testUserId,
+        life_area_id: testLifeAreaId,
+        parent_goal_id: null,
+        title: 'Test Goal',
+        description: 'Test Description',
+        goal_type: 'numeric',
+        target_value: '24',
+        current_value: '6',
+        target_unit: 'books',
+        deadline: null,
+        priority: '3',
+        status: 'active',
+        metadata: '{}',
+        reminder_config: '{}',
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+      };
+
+      // When
+      const goal = GoalModel['mapRowToGoal'](row);
+
+      // Then
+      expect(goal.metadata).toEqual({});
+      expect(goal.reminderConfig).toEqual({});
+      expect(goal.deadline).toBeNull();
+    });
+
+    test('should handle null values in database row', () => {
+      // Given
+      const row = {
+        id: 'goal_123',
+        user_id: testUserId,
+        life_area_id: testLifeAreaId,
+        parent_goal_id: null,
+        title: 'Test Goal',
+        description: null,
+        goal_type: 'numeric',
+        target_value: null,
+        current_value: '0',
+        target_unit: null,
+        deadline: null,
+        priority: '3',
+        status: 'active',
+        metadata: null,
+        reminder_config: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+      };
+
+      // When
+      const goal = GoalModel['mapRowToGoal'](row);
+
+      // Then
+      expect(goal.description).toBeNull();
+      expect(goal.targetValue).toBeNull();
+      expect(goal.targetUnit).toBeNull();
+      expect(goal.deadline).toBeNull();
+      expect(goal.metadata).toEqual({});
+      expect(goal.reminderConfig).toEqual({});
     });
   });
 });
